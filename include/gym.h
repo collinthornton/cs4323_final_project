@@ -2,7 +2,7 @@
 // 
 //   Author  -   Collin Thornton
 //   Email   -   collin.thornton@okstate.edu
-//   Brief   -   Assignment 02 Gym include
+//   Brief   -   Final Project Gym include
 //   Date    -   11-15-20
 //
 // ########################################## 

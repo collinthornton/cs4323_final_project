@@ -2,23 +2,10 @@
 // 
 //   Author  -   Collin Thornton
 //   Email   -   collin.thornton@okstate.edu
-//   Brief   -   Final Project part 2 include
-//   Date    -   11-15-20
+//   Brief   -   Final Project client struct source
+//   Date    -   11-16-20
 //
 // ########################################## 
 
+#include "client.h"
 
-
-#ifndef RESOURCE_MANAGER_H
-#define RESOURCE_MANAGER_H
-
-
-
-
-
-
-
-
-
-
-#endif // RESOURCE_MANAGER_H

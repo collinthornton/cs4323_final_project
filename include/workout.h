@@ -2,7 +2,7 @@
 // 
 //   Author  -   Collin Thornton
 //   Email   -   collin.thornton@okstate.edu
-//   Brief   -   Assignment 02 Workout include
+//   Brief   -   Final Project Workout include
 //   Date    -   11-15-20
 //
 // ########################################## 

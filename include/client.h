@@ -2,7 +2,7 @@
 // 
 //   Author  -   Collin Thornton
 //   Email   -   collin.thornton@okstate.edu
-//   Brief   -   Assignment 02 Client include
+//   Brief   -   Final Project Client include
 //   Date    -   11-15-20
 //
 // ########################################## 
@@ -30,9 +30,15 @@ typedef struct {
     Workout* workout;           // Set by trainer
 } Client;
 
+typedef struct {
+    Client* node;
+    Client* prev;
+    Client* next;
+} ClientNode;
 
 typedef struct {
-    Client* clients;
+    ClientNode* HEAD, TAIL;
+    ClientNode* node;
 
     int size = 0;
     int allocated = 0;
