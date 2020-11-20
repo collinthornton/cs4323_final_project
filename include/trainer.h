@@ -1,0 +1,1 @@
+void trainer_start();
