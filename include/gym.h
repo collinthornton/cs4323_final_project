@@ -14,8 +14,8 @@
 #include <stdbool.h>
 #include <semaphore.h>
 
-#include "trainer.h"
-#include "client.h"
+// #include "trainer.h"
+// #include "client.h"
 
 typedef enum {
     TWO_HALF,
@@ -30,9 +30,8 @@ typedef enum {
 
 
 typedef struct {
-    unsigned short num_plates[8] = {0, 0, 0, 0, 0, 0, 0, 0};    // Use PlateIndex as index for the array (will help w/ keeping track)
-    unsigned int total_weight;                                  // Summation of plate weights
-    bool in_use;                                                // Whether not plates are begin used (may help w/ deadlock detection)
+    unsigned short num_plates[8];                               // Use PlateIndex as index for the array (will help w/ keeping track)
+    float total_weight;                                  // Summation of plate weights
 } Weight;
 
 

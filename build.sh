@@ -1,0 +1,1 @@
+gcc -Iinclude/ src/resource_manager.c src/part2.c -o build/part2 -g

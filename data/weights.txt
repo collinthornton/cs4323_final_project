@@ -1,0 +1,36 @@
+# WEIGHT DATABASE FOR GYM
+# SPECIAL CHARACTERS:
+#   #  -> Comment. Program ignores line
+#   ;  -> Delimeter. Primary delimeter
+#   ,  -> Delimeter between plate weight and number of plates
+#  --- -> Section divider
+
+# TOTAL AVAILABLE WEIGHTS IN GYM
+# FORMAT : plate weight, number available
+
+2.5,10
+5,10
+10,10
+15,10
+20,10
+25,10
+35,10
+45,30
+
+
+
+# PROGRAM MODIFIES FILES BELOW DASHED LINES
+
+---
+# CURRENTLY CHECKED OUT PLATES
+# FORMAT : customer id; plate weight, # plates; plate weight, # plates; ...
+# ex. customer1;2.5,2;5,0;10,0;15,0;20,0;25,2;35,0;45,2
+
+
+
+
+
+---
+# CURRENT CHECK OUT REQUESTS
+# FORMAT : customer id; plate weight, # plates; plate weight, # plates; ...
+# ex. customer1;2.5,2;5,0;10,0;15,0;20,0;25,2;35,0;45,2
