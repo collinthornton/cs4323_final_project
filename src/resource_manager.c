@@ -24,7 +24,7 @@ Weight* getGymResources() {
         return NULL;
     }
 
-    Weight* database = (Weight*)malloc(sizeof(Weight));
+    Weight* database = weight_init(NULL, 0);
 
     char line[MAX_LINE_SIZE];
     while(fgets(line, MAX_LINE_SIZE-1, file) != NULL && !feof(file)) {
@@ -42,7 +42,7 @@ Weight* getGymResources() {
 
         if (weight == NULL || number_plates == NULL) {
             perror("getGymResources field_processing");
-            free(database);
+            weight_del(database);
             return NULL;
         }
 
@@ -50,7 +50,7 @@ Weight* getGymResources() {
         int num_plates;
         if((num_plates = strtol(number_plates, &end, 10)) == 0 && errno != 0) {
             perror("getGymResources number_plates");
-            free(database);
+            weight_del(database);
             return NULL;
         }
 

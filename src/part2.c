@@ -1,10 +1,28 @@
+// ##########################################
+// 
+//   Author  -   Collin Thornton
+//   Email   -   collin.thornton@okstate.edu
+//   Brief   -   Final Project part2 source
+//   Date    -   11-20-20
+//
+// ########################################## 
+
+
 #include <stdlib.h>
 #include <stdio.h>
+
+
+#include "part2.h"
 
 #include "resource_manager.h"
 
 
 int main(int argc, char** argv) {
+    test_resource_manager();
+}
+
+
+void test_resource_manager(void) {
     Weight *database;
     if((database = getGymResources()) == NULL) {
         exit(1);
@@ -20,6 +38,5 @@ int main(int argc, char** argv) {
     printf("%i\r\n", database->num_plates[THIRTY_FIVE]);
     printf("%i\r\n", database->num_plates[FORTY_FIVE]);
 
-    free(database);
-
+    weight_del(database);
 }
