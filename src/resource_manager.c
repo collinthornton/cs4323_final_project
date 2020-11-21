@@ -43,6 +43,7 @@ Weight* getGymResources() {
         if (weight == NULL || number_plates == NULL) {
             perror("getGymResources field_processing");
             weight_del(database);
+            fclose(file);
             return NULL;
         }
 
@@ -51,6 +52,7 @@ Weight* getGymResources() {
         if((num_plates = strtol(number_plates, &end, 10)) == 0 && errno != 0) {
             perror("getGymResources number_plates");
             weight_del(database);
+            fclose(file);
             return NULL;
         }
 
@@ -92,6 +94,7 @@ Weight* getGymResources() {
 
     }   
 
+    fclose(file);
     return database; 
 }
 

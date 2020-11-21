@@ -22,7 +22,7 @@ Weight* weight_init(short plate_array[8], float total_weight) {
         return NULL;
     }
 
-    if(plate_array != NULL) {
+    if(plate_array == NULL) {
         for(int i=0; i<8; ++i) weight->num_plates[i] = 0;
     } else {
         for(int i=0; i<8; ++i) weight->num_plates[i] = plate_array[i];
