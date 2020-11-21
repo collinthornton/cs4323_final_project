@@ -30,5 +30,7 @@ typedef struct {
 // - should maintain a finite state machine
 
 
+Trainer *trainer_init(TrainerState state, Client *client);
+int trainer_del(Trainer *trainer);
 
 #endif // TRAINER_H

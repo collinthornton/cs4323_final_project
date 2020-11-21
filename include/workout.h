@@ -22,6 +22,10 @@ typedef struct {
 } Workout;
 
 
+// allocate workout on heap
+Workout* workout_init(int total_sets, int sets_left, int total_weight, Weight *in_use);
 
+// free workout 
+int workout_del(Workout *workout);
 
 #endif
