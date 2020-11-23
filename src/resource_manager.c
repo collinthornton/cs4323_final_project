@@ -20,7 +20,7 @@ static const int MAX_LINE_SIZE = 1024;
 
 
 
-WeightMatrix* weight_matrix_init() {
+static WeightMatrix* weight_matrix_init() {
     WeightMatrix* matrix = malloc(sizeof(WeightMatrix));
 
     if(matrix == NULL) {
@@ -47,7 +47,7 @@ int weight_matrix_del(WeightMatrix* matrix) {
     return 0;
 }
 
-int weight_matrix_add_req(pid_t pid, Weight* weight, WeightMatrix *matrix) {
+static int weight_matrix_add_req(pid_t pid, Weight* weight, WeightMatrix *matrix) {
     WeightMatrixRow* row = weight_matrix_search(pid, matrix, NULL);
 
     if(row == NULL) {
@@ -57,6 +57,7 @@ int weight_matrix_add_req(pid_t pid, Weight* weight, WeightMatrix *matrix) {
 
         if(matrix->rows == NULL) {
             perror("resourceManager allocate row");
+            weight_del(weight);
             return -1;
         }
 
@@ -79,15 +80,19 @@ int weight_matrix_add_req(pid_t pid, Weight* weight, WeightMatrix *matrix) {
     return matrix->num_rows;
 }
 
-int weight_matrix_sub_req(pid_t pid, Weight *weight, WeightMatrix *matrix) {
+static int weight_matrix_sub_req(pid_t pid, Weight *weight, WeightMatrix *matrix) {
     int row_number;
     WeightMatrixRow *row = weight_matrix_search(pid, matrix, &row_number);
 
-    if(row == NULL) return -1;
+    if(row == NULL) {
+        weight_del(weight);
+        return -1;
+    }
 
     for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) {
         if(row->weight->num_plates[i] - weight->num_plates[i] < 0) {
             perror("weight_matrix_sub_req invalid request");
+            weight_del(weight);
             return -1;
         }
 
@@ -97,11 +102,13 @@ int weight_matrix_sub_req(pid_t pid, Weight *weight, WeightMatrix *matrix) {
     
     if(row->weight->total_weight > 0) {
         // FINISHED
+        weight_del(weight);
         return matrix->num_rows;
     }
 
     // ELSE WE NEED TO DELETE ROW AND RESTRUCTURE MATRIX
 
+    weight_del(weight);
     weight_del(row->weight);
 
     for(int i=row_number+1; i<matrix->num_rows; ++i) {
@@ -121,7 +128,7 @@ int weight_matrix_sub_req(pid_t pid, Weight *weight, WeightMatrix *matrix) {
     return matrix->num_rows;
 }
 
-WeightMatrixRow* weight_matrix_search(pid_t pid, WeightMatrix *matrix, int *row_number) {
+static WeightMatrixRow* weight_matrix_search(pid_t pid, WeightMatrix *matrix, int *row_number) {
     if(matrix == NULL || matrix->rows == NULL) return NULL;
 
     for(int i=0; i<matrix->num_rows; ++i) {
@@ -223,7 +230,7 @@ WeightMatrix* getWeightRequest() {
 }
 
 
-WeightMatrix* getWeightMatrixFromFile(unsigned int section) {
+static WeightMatrix* getWeightMatrixFromFile(unsigned int section) {
     if(section > 2 || section == 0) {
         perror("getWeightMatrixFromFile section");
         return NULL;
@@ -329,7 +336,7 @@ int writeWeightRequest(pid_t pid, Weight *weight) {
 }
 
 
-int writeWeightMatrixToFile(WeightMatrix *matrix, int section) {
+static int writeWeightMatrixToFile(WeightMatrix *matrix, int section) {
     if(section > 2 || section == 0) {
         perror("writeWeightToFile section");
         return 1;
@@ -414,7 +421,7 @@ int removeWeightRequest(pid_t pid, Weight *weight) {
 }
 
 
-char* removeWhiteSpace(char* str) {
+static char* removeWhiteSpace(char* str) {
     const char* d = str;
     do {
         while(*d == ' ' || *d == '\t') {

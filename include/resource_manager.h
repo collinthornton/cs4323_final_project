@@ -26,35 +26,161 @@ typedef struct{
 } WeightMatrix;
 
 
+//////////////////////////////
+//
+//  USER FUNCTIONS
+//
 
 
-WeightMatrix* weight_matrix_init();
+// FUNCTIONS TO GET WEIGHT REQUESTS FROM FILE
+/**
+ * @brief return the gym's total resources. must be deleted with weight_del()
+ * @return (Weight*) Vector of weights on heap
+ */
+Weight* getGymResources();
+
+
+/**
+ * @brief return the current weight requests. deleted with weight_matrix_del
+ * @return (WeightMatrix*) matrix of requests allocated on heap
+ */
+WeightMatrix* getWeightRequest();
+
+
+/**
+ * @brief return the currently allocated weights. deleted with weight_matrix_del
+ * @return (WeightMatrix*) matrix of allocations allocated on heap
+ */
+WeightMatrix* getWeightAllocation();
+
+
+/**
+ * @brief Free a WeightMatrix*, and all internal WeightRows* and Weights*
+ * @param matrix (WeightMatrix*) matrix to be deleted
+ * @return (int) 0 on success
+ */
 int weight_matrix_del(WeightMatrix *matrix);
 
-// Search matrix for pid. If found, adds weight to current row. Else, creates new row.
-int weight_matrix_add_req(pid_t pid, Weight *weight, WeightMatrix *matrix);
+// FUNCTIONS TO WRITE WEIGHT REQUESTS TO FILE
 
-// Search matrix for pid. If found, subtract weight from current row. Else, return 0
-int weight_matrix_sub_req(pid_t pid, Weight *weight, WeightMatrix *matrix);
-
-const char* weight_matrix_to_string(WeightMatrix *matrix, char buffer[]);
-
-WeightMatrixRow* weight_matrix_search(pid_t pid, WeightMatrix *matrix, int *row_number);
-
-Weight* getGymResources();
-WeightMatrix* getWeightRequest();
-WeightMatrix* getWeightAllocation();
-WeightMatrix* getWeightMatrixFromFile(unsigned int section);
-
-
+/**
+ * @brief write a new request to the file
+ * @param pid (pid_t) pid of process
+ * @param weight (Weight*) new request
+ * @return (int) negative on failure
+ */
 int writeWeightRequest(pid_t pid, Weight *weight);
-int writeWeightAllocation(pid_t pid, Weight *weight);
-int writeWeightMatrixToFile(WeightMatrix *matrix, int section);
 
+
+/**
+ * @brief write a new allocation to the file
+ * @param pid (pid_t) pid of process
+ * @param weight (Weight*) new allocation
+ * @return (int) negative on failure
+ */
+int writeWeightAllocation(pid_t pid, Weight *weight);
+
+
+// FUNCTIONS TO REMOVE WEIGHT REQUEST FROM FILE
+
+/**
+ * @brief remove a request from the file. will throw error if result is negative
+ * @param pid (pid_t) pid of process
+ * @param weight (Weight*) weight to be subtracted
+ * @return (int) negative on failure
+ */
 int removeWeightRequest(pid_t pid, Weight *weight);
+
+
+/**
+ * @brief remove an allocation from the file. will throw error if result is negative
+ * @param pid (pid_t) pid of process
+ * @param weight (Weight*) weight to be subtracted
+ * @return (int) negative on failure
+ */
 int removeWeightAllocation(pid_t pid, Weight *weight);
 
-char* removeWhiteSpace(char* str);
+
+/**
+ * @brief Return a string representative of matrix
+ * @param matrix (WeightMatrix*) matrix to be returned as string
+ * @param buffer (char[]) buffer to store string output
+ * @return (const char*) pointer to string. same as buffer
+ */
+const char* weight_matrix_to_string(WeightMatrix *matrix, char buffer[]);
+
+
+
+
+
+
+//////////////////////////////
+//
+//  HELPER FUNCTIONS
+//
+
+
+/**
+ * @brief Initailize a WeightMatrix on heap. All values NULL or 0
+ * @return (WeightMatrix*) pointer to new matrix
+ */
+static WeightMatrix* weight_matrix_init();
+
+
+
+/**
+ * @brief Search a WeightMatrix for a pid
+ * @param pid (pid_t) pid for which to search
+ * @param matrix (WeightMatrix*) matrix to be searched
+ * @param row_number (int*) storage for the row number. negative if row not found. can be set to NULL if not neededd
+ * @return (WeightMatrixRow*) pointer to the row. NULL if not found
+ */
+static WeightMatrixRow* weight_matrix_search(pid_t pid, WeightMatrix *matrix, int *row_number);
+
+
+/**
+ * @brief Add a weight request to a weight matrix. Will add new row if pid is not found
+ * @param pid (pid_t) pid of requesting process
+ * @param weight (Weight*) weight to be added
+ * @param matrix (WeightMatrix*) matrix to store summation
+ * @return (int) number of rows in matrix. Negative on error
+ */
+static int weight_matrix_add_req(pid_t pid, Weight *weight, WeightMatrix *matrix);
+
+
+/**
+ * @brief Subtract a weight request from a weight matrix. Will delete a row if result is 0 vector
+ * @param pid (pid_t) pid of process
+ * @param weight (Weight*) weight to be subtracted
+ * @param matrix (WeightMatrix*) matrix to store difference
+ * @return (int) nuber of rows in matrix. Negative on error
+ */
+static int weight_matrix_sub_req(pid_t pid, Weight *weight, WeightMatrix *matrix);
+
+
+/**
+ * @brief read a weight matrix from the input file
+ * @param section (unsigned int) section number from which to read
+ * @return (WeightMatrix*) pointer to weight matrix on heap
+ */
+static WeightMatrix* getWeightMatrixFromFile(unsigned int section);
+
+
+/**
+ * @brief write a weight matrix to the input file. will delete the file
+ * @param matrix (WeightMatrix*) matrix to be written
+ * @param section (int) section number at which to write
+ * @return (int) negative on failure
+ */
+static int writeWeightMatrixToFile(WeightMatrix *matrix, int section);
+
+
+/**
+ * @brief remove all whitespace from a string
+ * @param str (char*) input string. will be changed
+ * @return (const char*) output string. same as str
+ */
+static char* removeWhiteSpace(char* str);
 
 
 
