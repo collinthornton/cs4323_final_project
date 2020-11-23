@@ -1,0 +1,22 @@
+# WEIGHT ALLOCATION MATRICES FOR GYM
+# SPECIAL CHARACTERS:
+#   #  -> Comment. Program ignores line
+#   ,  -> Delimeter
+#  --- -> Section divider
+# SECTION 1 -> AVAILABLE
+# SECTION 2 -> ALLOCATION
+# SECTION 3 -> REQUEST
+# pid,2.5,5,10,15,20,25,35,45
+
+# AVAILABLE
+# 2.5,5,10,15,20,25,35,45
+
+10,10,10,10,10,10,10,30
+---
+14799,2,2,2,2,2,2,2,2
+14807,2,2,2,2,2,2,2,2
+14878,2,2,2,2,2,2,2,2
+---
+14795,2,2,2,2,2,2,2,2
+14803,2,2,2,2,2,2,2,2
+---

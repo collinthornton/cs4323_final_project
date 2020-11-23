@@ -10,6 +10,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 
 #include "part2.h"
@@ -22,21 +23,49 @@ int main(int argc, char** argv) {
 }
 
 
-void test_resource_manager(void) {
+void test_resource_manager(void) {   
     Weight *database;
     if((database = getGymResources()) == NULL) {
         exit(1);
     }
 
+    WeightMatrix *allocationMatrix;
+    if((allocationMatrix = getWeightAllocation()) == NULL) {
+        exit(1);
+    }
 
 
-    printf("2.5 plates -> %i\r\n", database->num_plates[TWO_HALF]);
-    printf("5.0 plates -> %i\r\n", database->num_plates[FIVE]);
-    printf("%i\r\n", database->num_plates[TEN]);
-    printf("%i\r\n", database->num_plates[TWENTY]);
-    printf("%i\r\n", database->num_plates[TWENTY_FIVE]);
-    printf("%i\r\n", database->num_plates[THIRTY_FIVE]);
-    printf("%i\r\n", database->num_plates[FORTY_FIVE]);
+    char line[1024];
+    weight_to_string(database, line);
+
+    printf("GYM RESOURCES\r\n\r\n");
+    printf("%s\r\n", line);
+
+
+    weight_matrix_to_string(allocationMatrix, line);
+
+    printf("\r\n----------\r\n\r\n");
+    printf("WEIGHT ALLOCATION\r\n\r\n");
+    printf("%s\r\n", line);
+
+
+    pid_t pid = getpid();
+    unsigned short weights[8] = {2, 2, 2, 2, 2, 2, 2, 2};
+
+    Weight *weight = weight_init(weights);
+
+    // weight_matrix_add_req(pid, weight, allocationMatrix);
+    
+    writeWeightAllocation(pid+4, weight);
+
+    weight = weight_init(weights);
+    writeWeightRequest(pid, weight);
+
+    //weight = weight_init(weights);
+    //removeWeightAllocation(820, weight);
+
 
     weight_del(database);
+    //weight_del(weight);
+    weight_matrix_del(allocationMatrix);
 }

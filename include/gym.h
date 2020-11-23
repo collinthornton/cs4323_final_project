@@ -44,7 +44,8 @@ typedef struct {
 // MAINTAINS THE GYM DATABASE OF RESOURCES
 
 // allocate on heap. Set params as NULL if not available
-Weight* weight_init(short plate_array[8], float total_weight);
+Weight* weight_init(short plate_array[8]);
 int weight_del(Weight *weight);
-
+float weight_calc_total_weight(Weight *weight);
+const char* weight_to_string(Weight *weight, char buffer[]);
 #endif // GYM_H
