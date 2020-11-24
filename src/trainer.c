@@ -53,3 +53,31 @@ void trainer_start(){
     }    
 
 }
+
+Trainer* find_trainer_with_client(Client* clientToFind, TrainerList* trainerList){
+    if (trainerList == NULL) return NULL;
+
+    TrainerNode *tmp = trainerList->HEAD;
+
+    while(tmp != NULL){
+        if (tmp->node->current_client == clientToFind){
+            return tmp->node;
+        }
+    }
+
+    return NULL;
+}
+
+Trainer* find_available_trainer(TrainerList* trainerList){
+    if (trainerList == NULL) return NULL;
+
+    TrainerNode *tmp = trainerList->HEAD;
+
+    while(tmp != NULL){
+        if (tmp->node->current_client == NULL){
+            return tmp->node;
+        }
+    }
+
+    return NULL;
+}

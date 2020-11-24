@@ -37,3 +37,7 @@ int trainer_del_list(TrainerList *list);
 int trainer_del_trainer(Trainer *trainer);
 
 void trainer_start();
+
+Trainer* find_trainer_with_client(Client* clientToFind, TrainerList* trainerList);
+
+Trainer* find_available_trainer(TrainerList* trainerList);

@@ -28,7 +28,7 @@
 
 void open_gym(int numberTrainers, int numberCouches, int numberClients, int useSemaphors){
     //First, established the shared memory object
-    init_shared_gym();
+    init_shared_gym(numberCouches);
 
     int processID;
 
@@ -60,6 +60,8 @@ void open_gym(int numberTrainers, int numberCouches, int numberClients, int useS
 
         if (sharedGymObject == NULL){
             //Something went wrong retrieving it
+            printf("There was an error retrieving the shared Gym object\n");
+            return;
         }
 
         //First get the trainer list built out
@@ -72,11 +74,11 @@ void open_gym(int numberTrainers, int numberCouches, int numberClients, int useS
 
             //Make this process an arriving client
             Client *newClient = client_init(ARRIVING, childProcessID);
+            client_arriving_event(sharedGymObject, newClient);
 
-            //Third, moving "arriving" clients to waiting room if the trainers are busy
-
-            //Go through customer to trainer assignment
-            //and send clients to waiting list if there are no trainers
+            if(newClient->state == LEAVING){
+                //Something happened when the customer arrived to cause them to leave, so we'll need to kill the process after this
+            }
         }
 
         //Fourth, figure out how to handle demonstrating the boundary cases
@@ -85,7 +87,7 @@ void open_gym(int numberTrainers, int numberCouches, int numberClients, int useS
 
 }
 
-int init_shared_gym(){
+int init_shared_gym(int maxCouches){
     Gym *sharedGym;
 
     int sharedMemoryID;
@@ -109,6 +111,7 @@ int init_shared_gym(){
     sharedGym->arrivingList = client_init_list();
     sharedGym->trainerList = trainer_init_list();
     sharedGym->waitingList = client_init_list();
+    sharedGym->maxCouches = maxCouches;
 
     if (shmdt(sharedGym) == -1){
         printf("Something happened trying to detach from shared memory\n");
@@ -156,5 +159,34 @@ void clean_shared_gym(Gym* sharedGym){
 }
 
 void client_arriving_event(Gym* sharedGym, Client* newClient){
+    //First add it to the arriving LL 
+    client_add_to_list(newClient, sharedGym->arrivingList);
+
+    //Next, check to see if a trainer grabbed the client
+    if (find_trainer_with_client(newClient, sharedGym->trainerList) != NULL){
+        //We are done here.
+        return;
+    }
+
+    //Time to go to the waiting room
+    client_rem_from_list(newClient, sharedGym->arrivingList);
+    newClient->state = TRAVELING;
     
+    //This is the "traveling" piece, also a semaphore area
+    sleep(3);
+    //End the semaphore
+
+    //Now check if there is room on the couches
+    if(sharedGym->waitingList->size<sharedGym->maxCouches){
+        //Another semaphore areas
+        newClient->state = WAITING;
+        client_add_to_list(newClient, sharedGym->waitingList);
+        sharedGym->maxCouches++;
+        //End the semaphore
+    } else {
+        //No couches available, no trainers available, time to leave
+        newClient->state = LEAVING;
+    }
 }
+
+
