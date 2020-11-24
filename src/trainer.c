@@ -81,3 +81,17 @@ Trainer* find_available_trainer(TrainerList* trainerList){
 
     return NULL;
 }
+
+Trainer* find_trainer_on_phone(TrainerList* trainerList){
+    if (trainerList == NULL) return NULL;
+
+    TrainerNode *tmp = trainerList->HEAD;
+
+    while(tmp != NULL){
+        if (tmp->node->state == ON_PHONE){
+            return tmp->node;
+        }
+    }
+
+    return NULL;
+}

@@ -41,3 +41,4 @@ void trainer_start();
 Trainer* find_trainer_with_client(Client* clientToFind, TrainerList* trainerList);
 
 Trainer* find_available_trainer(TrainerList* trainerList);
+Trainer* find_trainer_on_phone(TrainerList* trainerList);

@@ -168,6 +168,18 @@ void client_arriving_event(Gym* sharedGym, Client* newClient){
         return;
     }
 
+    //Next see if there are any trainers on their phones
+    Trainer* trainer = find_trainer_on_phone(sharedGym->trainerList);
+    if (trainer != NULL){
+        client_rem_from_list(newClient, sharedGym->arrivingList);
+
+        newClient->state = TRAINING;
+        trainer->current_client = newClient;
+        trainer->state = WITH_CLIENT;
+        
+        return;
+    }
+
     //Time to go to the waiting room
     client_rem_from_list(newClient, sharedGym->arrivingList);
     newClient->state = TRAVELING;
