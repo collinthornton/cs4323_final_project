@@ -16,13 +16,9 @@
 #include "resource_manager.h"
 #include "client.h"
 
-#define TEST_WORKOUT_ROOM   // UNCOMMENT TO TEST WITH main()
+//#define TEST_WORKOUT_ROOM   // UNCOMMENT TO TEST WITH main()
 
-#ifdef TEST_WORKOUT_ROOM  
-int main(int argc, char** argv) {
-    test_resource_manager();
-}
-#endif // TEST_WORKOUT_ROOM
+
 
 void test_resource_manager(void) {   
     char line[1024];
@@ -54,6 +50,7 @@ void test_resource_manager(void) {
 
 
     printf("Press enter to write a weight request\r\n");
+    fflush(stdin);
     fgets(in, 2, stdin);
 
     // TEST writeWeightRequest (section 3 of input file). Deletes weight
@@ -68,6 +65,7 @@ void test_resource_manager(void) {
 
 
     printf("Press enter to grant the weight request\r\n");
+    fflush(stdin);
     fgets(in, 2, stdin);
 
     // TEST removeWeightAllocation (section 2 of input file). Deletes weight
@@ -81,6 +79,7 @@ void test_resource_manager(void) {
 
 
     printf("Press enter to remove the weight allocation\r\n");
+    fflush(stdin);
     fgets(in, 2, stdin);
     
     
@@ -88,6 +87,7 @@ void test_resource_manager(void) {
     pid_t request_pid = pid;
     weight = weight_init(weights);
     removeWeightAllocation(request_pid, weight);
+    weight_del(weight);
 
     weight = getAvailableWeights();
     weight_to_string(weight, line);
@@ -133,3 +133,12 @@ void test_resource_manager(void) {
 
     printf("\r\n----------\r\n\r\n");    
 }
+
+
+
+
+#ifdef TEST_WORKOUT_ROOM  
+int main(int argc, char** argv) {
+    test_resource_manager();
+}
+#endif // TEST_WORKOUT_ROOM

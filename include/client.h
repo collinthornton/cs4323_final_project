@@ -11,11 +11,10 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include "trainer.h"
+#include "client_trainer.h"
 #include "workout.h"
-#include "gym.h"
+#include "gym_resources.h"
 
-struct Trainer;
 
 typedef enum {
     ARRIVING,
@@ -24,14 +23,14 @@ typedef enum {
     LEAVING
 } ClientState;
 
-typedef struct {
+struct Client {
     pid_t pid;
     ClientState state;
 
-    struct Trainer* current_trainer;   
+    Trainer* current_trainer;   
     Couch* current_couch;       //TODO Should this just be a semaphore?
     Workout* workout;           // Set by trainer
-} Client;
+};
 
 typedef struct ClientNode {
     Client* node;
@@ -51,7 +50,7 @@ typedef struct {
 
 
 // Allocate client on heap. Init params as NULL if unavailable
-Client* client_init(pid_t pid, ClientState state, struct Trainer* trainer, Couch *couch, Workout *workout);
+Client* client_init(pid_t pid, ClientState state, Trainer* trainer, Couch *couch, Workout *workout);
 int client_del(Client* client);
 const char* client_to_string(Client *client, char buffer[]);
 

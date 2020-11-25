@@ -16,7 +16,7 @@
 
 // #define CLIENT_TEST  // UNCOMMENT TO TEST WITH main()
 
-Client* client_init(pid_t pid, ClientState state, struct Trainer* trainer, Couch* couch, Workout* workout) {
+Client* client_init(pid_t pid, ClientState state, Trainer* trainer, Couch* couch, Workout* workout) {
     Client* client = (Client*)malloc(sizeof(Client));
 
     if(client == NULL) {

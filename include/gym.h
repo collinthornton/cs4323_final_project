@@ -12,42 +12,28 @@
 #define GYM_H
 
 #include <stdbool.h>
-#include <semaphore.h>
 
-// #include "trainer.h"
-// #include "client.h"
+#include "trainer.h"
+#include "client.h"
 
-#define NUMBER_WEIGHTS 8
-
-typedef enum {
-    TWO_HALF,
-    FIVE,
-    TEN,
-    FIFTEEN,
-    TWENTY,
-    TWENTY_FIVE,
-    THIRTY_FIVE,
-    FORTY_FIVE
-} PlateIndex;
-
-
-typedef struct {
-    int num_plates[NUMBER_WEIGHTS];           // Use PlateIndex as index for the array (will help w/ keeping track)
-    float total_weight;                                  // Summation of plate weights
-} Weight;
-
-
-typedef struct {
-    sem_t couch_mutex;      //! MAY BE EASIER TO JUST MAKE A SEMAPHORE
-} Couch;
-
+#define SHARED_KEY 0x1234
+#define BUFFER_SIZE 1024
 
 
 // MAINTAINS THE GYM DATABASE OF RESOURCES
+typedef struct {
+    ClientList* waitingList;
+    ClientList* arrivingList;
+    TrainerList* trainerList;
+    int maxCouches;
+} Gym;
 
-// allocate on heap. Set params as NULL if not available
-Weight* weight_init(int plate_array[NUMBER_WEIGHTS]);
-int weight_del(Weight *weight);
-float weight_calc_total_weight(Weight *weight);
-const char* weight_to_string(Weight *weight, char buffer[]);
+
+void open_gym(int numberTrainers, int numberCouches, int numberClients, int useSemaphors);
+int init_shared_gym(int maxCouches);
+Gym* get_shared_gym();
+void clean_shared_gym(Gym* sharedGym);
+
+
+
 #endif // GYM_H

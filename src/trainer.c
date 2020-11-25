@@ -7,7 +7,6 @@
 //
 // ########################################## 
 
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -16,7 +15,7 @@
 
 // #define TRAINER_TEST  // UNCOMMENT TO TEST WITH main()
 
-Trainer* trainer_init(pid_t pid, TrainerState state, struct Client* client) {
+Trainer* trainer_init(pid_t pid, TrainerState state, Client* client) {
     Trainer* trainer = (Trainer*)malloc(sizeof(Trainer));
 
     if(trainer == NULL) {
@@ -161,6 +160,41 @@ const char* trainer_list_to_string(TrainerList* list, char buffer[]) {
     }
     sprintf(buffer + strlen(buffer), "   TAIL\n");
     return buffer;
+}
+
+
+
+Trainer* trainer_list_find_client(Client *client, TrainerList *list) {
+    if(list == NULL || client == NULL) return NULL;
+
+    TrainerNode *tmp = list->HEAD;
+    while(tmp != NULL) {
+        if(tmp->node->current_client == client) return tmp->node;
+        tmp = tmp->next;
+    }
+    return NULL;
+}
+
+Trainer* trainer_list_find_phone(TrainerList *list) {
+    if(list == NULL) return NULL;
+
+    TrainerNode *tmp = list->HEAD;
+    while(tmp != NULL) {
+        if(tmp->node->state == ON_PHONE) return tmp->node;
+        tmp = tmp->next;
+    }
+    return NULL;
+}
+
+Trainer* trainer_list_find_available(TrainerList *list) {
+    if(list == NULL) return NULL;
+
+    TrainerNode *tmp = list->HEAD;
+    while(tmp != NULL) {
+        if(tmp->node->state == FREE) return tmp->node;
+        tmp = tmp->next;
+    }
+    return NULL;
 }
 
 

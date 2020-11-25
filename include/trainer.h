@@ -10,9 +10,9 @@
 #ifndef TRAINER_H
 #define TRAINER_H
 
-#include "client.h"
+#include <stdlib.h>
+#include "client_trainer.h"
 
-struct Client;
 
 typedef enum {
     FREE,
@@ -21,11 +21,11 @@ typedef enum {
     TRAVELLING
 } TrainerState;
 
-typedef struct {
+struct Trainer {
     pid_t pid;
     TrainerState state;
-    struct Client* current_client;
-} Trainer;
+    Client* current_client;
+};
 
 typedef struct TrainerNode {
     Trainer* node;
@@ -47,7 +47,7 @@ typedef struct {
 
 
 // Allocate trainer on heap. Init params as NULL if unavailable
-Trainer* trainer_init(pid_t pid, TrainerState state, struct Client* client);
+Trainer* trainer_init(pid_t pid, TrainerState state, Client* client);
 int trainer_del(Trainer* trainer);
 const char* trainer_to_string(Trainer *trainer, char buffer[]);
 
@@ -56,6 +56,10 @@ TrainerList* trainer_list_init();
 int trainer_list_del(TrainerList *list);
 int trainer_list_add_trainer(Trainer *trainer, TrainerList* list);
 int trainer_list_rem_trainer(Trainer *trainer, TrainerList *list);
+
+Trainer* trainer_list_find_client(Client *client, TrainerList *list);
+Trainer* trainer_list_find_available(TrainerList *list);
+Trainer* trainer_list_find_phone(TrainerList *list);
 
 const char* trainer_list_to_string(TrainerList *list, char buffer[]);
 

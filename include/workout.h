@@ -11,7 +11,9 @@
 #ifndef WORKOUT_H
 #define WORKOUT_H
 
-#include "gym.h"
+
+#include "gym_resources.h"
+
 
 typedef struct {
     int total_sets;
@@ -20,6 +22,10 @@ typedef struct {
     int total_weight;
     Weight* in_use;
 } Workout;
+
+
+
+
 
 
 // allocate workout on heap

@@ -492,7 +492,20 @@ static int writeWeightMatrixToFile(WeightMatrix *matrix, int section) {
 
 int removeWeightAllocation(pid_t pid, Weight *weight) {
     WeightMatrix *matrix = getWeightAllocation();
-    weight_matrix_sub_req(pid, weight, matrix);
+
+    WeightMatrixRow *row = weight_matrix_search(pid, matrix, NULL);
+    if (row == NULL) {
+        weight_matrix_del(matrix);
+       return -1;
+    }
+
+    vector_subtract(row->weight->num_plates, weight->num_plates, NUMBER_WEIGHTS);
+    if(vector_negative(row->weight->num_plates, NUMBER_WEIGHTS)) {
+        perror("removeWeightAllocation() invalid argument");
+        weight_matrix_del(matrix);
+        return -1;
+    }
+
     int ret = writeWeightMatrixToFile(matrix, 1);
     weight_matrix_del(matrix);
     return ret;
