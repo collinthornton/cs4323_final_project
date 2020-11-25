@@ -63,6 +63,7 @@ Trainer* find_trainer_with_client(Client* clientToFind, TrainerList* trainerList
         if (tmp->node->current_client == clientToFind){
             return tmp->node;
         }
+        tmp = tmp->next;
     }
 
     return NULL;
@@ -77,6 +78,7 @@ Trainer* find_available_trainer(TrainerList* trainerList){
         if (tmp->node->current_client == NULL){
             return tmp->node;
         }
+        tmp = tmp->next;
     }
 
     return NULL;
@@ -91,6 +93,7 @@ Trainer* find_trainer_on_phone(TrainerList* trainerList){
         if (tmp->node->state == ON_PHONE){
             return tmp->node;
         }
+        tmp = tmp->next;
     }
 
     return NULL;
