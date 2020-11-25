@@ -15,6 +15,8 @@
 #include "workout.h"
 #include "gym.h"
 
+struct Trainer;
+
 typedef enum {
     ARRIVING,
     WAITING,
@@ -23,25 +25,24 @@ typedef enum {
 } ClientState;
 
 typedef struct {
+    pid_t pid;
     ClientState state;
 
-    Trainer* current_trainer;   
+    struct Trainer* current_trainer;   
     Couch* current_couch;       //TODO Should this just be a semaphore?
     Workout* workout;           // Set by trainer
 } Client;
 
-typedef struct {
+typedef struct ClientNode {
     Client* node;
-    Client* prev;
-    Client* next;
+    struct ClientNode* prev;
+    struct ClientNode* next;
 } ClientNode;
 
 typedef struct {
-    ClientNode* HEAD, TAIL;
-    ClientNode* node;
+    ClientNode *HEAD, *TAIL;
 
-    int size;
-    int allocated;
+    int len;
 } ClientList;
 
 
@@ -50,14 +51,18 @@ typedef struct {
 
 
 // Allocate client on heap. Init params as NULL if unavailable
-Client* client_init(ClientState state, Trainer* trainer, Couch *couch, Workout *workout);
+Client* client_init(pid_t pid, ClientState state, struct Trainer* trainer, Couch *couch, Workout *workout);
+int client_del(Client* client);
+const char* client_to_string(Client *client, char buffer[]);
 
-ClientList* client_init_list();
-int client_add_to_list(Client *client, ClientList* list);
-int client_rem_from_list(Client *client, ClientList *list);
 
-int client_del_list(ClientList *list);
-int client_del_client(Client *client);
+ClientList* client_list_init();
+int client_list_del(ClientList *list);
+int client_list_add_client(Client *client, ClientList* list);
+int client_list_rem_client(Client *client, ClientList *list);
 
+const char* client_list_to_string(ClientList *list, char buffer[]);
+
+ClientNode* client_list_srch(Client *client, ClientList *list);
 
 #endif // CLIENT_H

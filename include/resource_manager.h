@@ -102,6 +102,13 @@ int removeWeightAllocation(pid_t pid, Weight *weight);
 
 
 /**
+ * @brief clear allocation and request matrices from file
+ * @return (int) negative on failure
+ */
+int clearWeightFile();
+
+
+/**
  * @brief Return a string representative of matrix
  * @param matrix (WeightMatrix*) matrix to be returned as string
  * @param buffer (char[]) buffer to store string output

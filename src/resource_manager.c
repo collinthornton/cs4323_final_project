@@ -14,9 +14,12 @@
 #include <string.h>
 #include <errno.h>
 
+#define MAX_LINE_SIZE 1024
+
+// #define SUB_DELETE_ROW // UNCOMMENT TO DELETE MATRIX ROW WHEN SUBTRACTION = 0
+
 static const char* FILENAME = "data/weight_allocation.txt";
 static const char* TMP_FILENAME = "data/weight_allocation.tmp";
-static const int MAX_LINE_SIZE = 1024;
 
 
 
@@ -24,7 +27,7 @@ static WeightMatrix* weight_matrix_init() {
     WeightMatrix* matrix = malloc(sizeof(WeightMatrix));
 
     if(matrix == NULL) {
-        perror("getGymResources malloc WeightMatrxi");
+        perror("weight_matrix_init malloc()");
         return NULL;
     }
 
@@ -100,14 +103,14 @@ static int weight_matrix_sub_req(pid_t pid, Weight *weight, WeightMatrix *matrix
     }
     row->weight->total_weight = weight_calc_total_weight(row->weight);
     
-    if(row->weight->total_weight > 0) {
+    if(row->weight->total_weight >= 0) {
         // FINISHED
         weight_del(weight);
         return matrix->num_rows;
     }
 
     // ELSE WE NEED TO DELETE ROW AND RESTRUCTURE MATRIX
-
+    #ifdef SUB_DELETE_ROW
     weight_del(weight);
     weight_del(row->weight);
 
@@ -124,6 +127,7 @@ static int weight_matrix_sub_req(pid_t pid, Weight *weight, WeightMatrix *matrix
         free(matrix->rows);
         matrix->rows = 0;
     }
+    #endif
 
     return matrix->num_rows;
 }
@@ -163,7 +167,11 @@ Weight* getGymResources() {
 
     Weight* database = weight_init(NULL);
 
-    char line[MAX_LINE_SIZE];
+    char line[MAX_LINE_SIZE] = "\0";
+
+    // THROW OUT FIRST LINE
+    fgets(line, MAX_LINE_SIZE-1, file);
+
     while(fgets(line, MAX_LINE_SIZE-1, file) != NULL && !feof(file)) {
         removeWhiteSpace(line);
         
@@ -183,8 +191,9 @@ Weight* getGymResources() {
         }
 
         for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) {
-            if(number_plates == NULL) {
+            if(number_plates == NULL && i != FORTY_FIVE) {
                 perror("getGymResources field_processing");
+                printf("%d\n", i);
                 weight_del(database);
                 fclose(file);
                 return NULL;
@@ -204,12 +213,6 @@ Weight* getGymResources() {
             database->num_plates[i] = num_plates;
 
             number_plates = strtok(NULL, ",");
-            if(number_plates == NULL && i != FORTY_FIVE) {
-                perror("getGymResources string token");
-                weight_del(database);
-                fclose(file);
-                return NULL;
-            }
         }
 
     }   
@@ -321,17 +324,32 @@ static WeightMatrix* getWeightMatrixFromFile(unsigned int section) {
 
 
 int writeWeightAllocation(pid_t pid, Weight *weight) {
-    WeightMatrix *matrix = getWeightAllocation();
-    weight_matrix_add_req(pid, weight, matrix);
-    int ret = writeWeightMatrixToFile(matrix, 1);
-    weight_matrix_del(matrix);
+    WeightMatrix *alloc_matrix = getWeightAllocation();
+    WeightMatrix *req_matrix = getWeightRequest();
+    Weight *tmp_weight = weight_init(NULL);
+
+    weight_matrix_add_req(pid, weight, alloc_matrix);
+    weight_matrix_add_req(pid, tmp_weight, req_matrix);
+
+    int ret = writeWeightMatrixToFile(alloc_matrix, 1);
+    writeWeightMatrixToFile(req_matrix, 2);
+    weight_matrix_del(alloc_matrix);
+    weight_matrix_del(req_matrix);
     return ret;
 }
 int writeWeightRequest(pid_t pid, Weight *weight) {
-    WeightMatrix *matrix = getWeightRequest();
-    weight_matrix_add_req(pid, weight, matrix);
-    int ret = writeWeightMatrixToFile(matrix, 2);
-    weight_matrix_del(matrix);
+    WeightMatrix *req_matrix = getWeightRequest();
+    WeightMatrix *alloc_matrix = getWeightAllocation();
+    Weight *tmp_weight = weight_init(NULL);
+
+    weight_matrix_add_req(pid, weight, req_matrix);
+    weight_matrix_add_req(pid, tmp_weight, alloc_matrix);
+
+    int ret = writeWeightMatrixToFile(req_matrix, 2);
+    writeWeightMatrixToFile(alloc_matrix, 1);
+
+    weight_matrix_del(req_matrix);
+    weight_matrix_del(alloc_matrix);
     return ret;
 }
 
@@ -418,6 +436,15 @@ int removeWeightRequest(pid_t pid, Weight *weight) {
     int ret = writeWeightMatrixToFile(matrix, 2);
     weight_matrix_del(matrix);
     return ret;
+}
+
+int clearWeightFile() {
+    WeightMatrix *matrix = weight_matrix_init();
+    int ret1 = writeWeightMatrixToFile(matrix, 1);
+    int ret2 = writeWeightMatrixToFile(matrix, 2);
+    weight_matrix_del(matrix);
+    if(ret2 < 0) return ret2;
+    return ret1;
 }
 
 

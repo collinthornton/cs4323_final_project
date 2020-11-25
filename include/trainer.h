@@ -12,6 +12,8 @@
 
 #include "client.h"
 
+struct Client;
+
 typedef enum {
     FREE,
     ON_PHONE,
@@ -21,7 +23,7 @@ typedef enum {
 
 typedef struct {
     TrainerState state;
-    Client* current_client;
+    struct Client* current_client;
 } Trainer;
 
 
@@ -30,7 +32,7 @@ typedef struct {
 // - should maintain a finite state machine
 
 
-Trainer *trainer_init(TrainerState state, Client *client);
+Trainer *trainer_init(TrainerState state, struct Client *client);
 int trainer_del(Trainer *trainer);
 
 #endif // TRAINER_H

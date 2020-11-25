@@ -8,11 +8,11 @@
 // ########################################## 
 
 
-#ifndef PART2_H
-#define PART2_H
+#ifndef WORKOUT_ROOM_H
+#define WORKOUT_ROOM_H
 
 void test_resource_manager(void);
 
 
 
-#endif // PART2_H
+#endif // WORKOUT_ROOM_H
