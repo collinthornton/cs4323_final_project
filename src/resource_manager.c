@@ -8,6 +8,7 @@
 // ########################################## 
 
 #include "resource_manager.h"
+#include "vector.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -92,14 +93,11 @@ static int weight_matrix_sub_req(pid_t pid, Weight *weight, WeightMatrix *matrix
         return -1;
     }
 
-    for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) {
-        if(row->weight->num_plates[i] - weight->num_plates[i] < 0) {
-            perror("weight_matrix_sub_req invalid request");
-            weight_del(weight);
-            return -1;
-        }
-
-        row->weight->num_plates[i] -= weight->num_plates[i];
+    vector_subtract(row->weight->num_plates, weight->num_plates, NUMBER_WEIGHTS);
+    if(vector_negative(row->weight->num_plates, NUMBER_WEIGHTS)) {
+        perror("weight_matrix_sub_req invalid request");
+        weight_del(weight);
+        return -1;
     }
     row->weight->total_weight = weight_calc_total_weight(row->weight);
     
@@ -159,6 +157,28 @@ const char* weight_matrix_to_string(WeightMatrix *matrix, char buffer[]) {
 
 
 Weight* getGymResources() {
+    Weight *database = getWeightFromFile(0);
+    return database;
+}
+
+Weight* getAvailableWeights() {
+    Weight *total = getGymResources();
+    WeightMatrix *allocated = getWeightAllocation();
+    
+    Weight *total_used = weight_init(NULL);
+    for(int i=0; i<allocated->num_rows; ++i) {
+        vector_add(total_used->num_plates, allocated->rows[i].weight->num_plates, NUMBER_WEIGHTS);
+    }
+
+    vector_subtract(total->num_plates, total_used->num_plates, NUMBER_WEIGHTS);
+
+    weight_matrix_del(allocated);
+    weight_del(total_used);
+    return total;
+}
+
+
+Weight* getWeightFromFile(unsigned int section) {
     FILE *file = fopen(FILENAME, "r");
     if(file == NULL) {
         perror("getGymResources fopen()");
@@ -171,6 +191,14 @@ Weight* getGymResources() {
 
     // THROW OUT FIRST LINE
     fgets(line, MAX_LINE_SIZE-1, file);
+
+    for(int i=0; i<section; ++i) {
+        while(fgets(line, MAX_LINE_SIZE-1, file) != NULL && !feof(file)) {
+            if(line[0] == '#' || line[0] == '\n' || line[0] == '\r') continue;
+            if(strstr(line, "---") != NULL) break;
+        }
+    }
+
 
     while(fgets(line, MAX_LINE_SIZE-1, file) != NULL && !feof(file)) {
         removeWhiteSpace(line);
@@ -220,7 +248,7 @@ Weight* getGymResources() {
     fclose(file);
 
     database->total_weight = weight_calc_total_weight(database);
-    return database; 
+    return database;
 }
 
 
@@ -319,6 +347,45 @@ static WeightMatrix* getWeightMatrixFromFile(unsigned int section) {
 
     fclose(file);
     return database;  
+}
+
+
+int grantWeightRequest(pid_t pid) {
+    WeightMatrix *tot_request = getWeightRequest();
+    WeightMatrix *tot_allocation = getWeightAllocation();
+    Weight *currently_availble = getAvailableWeights();
+
+    int req_row, alloc_row;
+    WeightMatrixRow *request = weight_matrix_search(pid, tot_request, &req_row);
+    WeightMatrixRow *allocation = weight_matrix_search(pid, tot_allocation, &alloc_row);
+    
+    if(request == NULL) {
+        perror("grantWeightRequest() pid doesn't exit");
+        weight_matrix_del(tot_allocation);
+        weight_matrix_del(tot_request);
+        weight_del(currently_availble);
+        return -1;
+    }
+
+    vector_add(allocation->weight->num_plates, request->weight->num_plates, NUMBER_WEIGHTS);
+    vector_subtract(request->weight->num_plates, request->weight->num_plates, NUMBER_WEIGHTS);
+    
+    if(vector_less_than_equal(allocation->weight->num_plates, currently_availble->num_plates, NUMBER_WEIGHTS) == false) {
+        perror("grantWeightRequest() allocation out of bounds");
+        weight_matrix_del(tot_allocation);
+        weight_matrix_del(tot_request);
+        weight_del(currently_availble);
+        return -1;
+    }
+    
+    writeWeightMatrixToFile(tot_allocation, 1);
+    writeWeightMatrixToFile(tot_request, 2);
+
+    weight_matrix_del(tot_allocation);
+    weight_matrix_del(tot_request);
+    weight_del(currently_availble);
+
+    return 0;
 }
 
 

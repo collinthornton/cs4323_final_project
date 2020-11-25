@@ -15,7 +15,7 @@
 #include "gym.h"
 
 
-Weight* weight_init(short plate_array[8]) {
+Weight* weight_init(int plate_array[8]) {
     Weight* weight = malloc(sizeof(Weight));
 
     if(weight == NULL) {

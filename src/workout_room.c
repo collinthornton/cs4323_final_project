@@ -40,35 +40,59 @@ void test_resource_manager(void) {
     // TEST WRITING FUNCITONS
     //
 
-    pid_t pid = getpid();
-    unsigned short weights[8] = {2, 2, 2, 2, 2, 2, 2, 2};
+    pid_t pid = 2;
+    int weights[8] = {2, 2, 2, 2, 2, 2, 2, 2};
 
     printf("Process ID: %d\r\n\r\n", pid);
-
-
-    Weight *weight = weight_init(weights);
     
 
-    // TEST writeWeigthAllocation (section 2 of input file). Deletes weight
-    writeWeightAllocation(pid+4, weight);
+    char in[5];
 
+    // TEST writeWeigthAllocation (section 2 of input file). Deletes weight
+    //writeWeightAllocation(pid+4, weight);
+
+
+
+    printf("Press enter to write a weight request\r\n");
+    fgets(in, 2, stdin);
 
     // TEST writeWeightRequest (section 3 of input file). Deletes weight
-    weight = weight_init(weights);
+    Weight *weight = weight_init(weights);
     writeWeightRequest(pid, weight);
 
+    weight = getAvailableWeights();
+    weight_to_string(weight, line);
+    weight_del(weight);
+    printf("currently availble: %s\r\n\r\n\r\n", line);
+
+
+
+    printf("Press enter to grant the weight request\r\n");
+    fgets(in, 2, stdin);
 
     // TEST removeWeightAllocation (section 2 of input file). Deletes weight
-    pid_t allocation_pid = pid+4;
-    weight = weight_init(weights);
-    removeWeightAllocation(allocation_pid, weight);
+    //weight = weight_init(weights);
+    grantWeightRequest(pid);
+
+    weight = getAvailableWeights();
+    weight_to_string(weight, line);
+    weight_del(weight);
+    printf("currently availble: %s\r\n\r\n\r\n", line);
 
 
+    printf("Press enter to remove the weight allocation\r\n");
+    fgets(in, 2, stdin);
+    
+    
     // TEST removeWeightRequest (section 3 of input file). Deletes weight
-    pid_t request_pid = 10261;
+    pid_t request_pid = pid;
     weight = weight_init(weights);
-    removeWeightRequest(request_pid, weight);
+    removeWeightAllocation(request_pid, weight);
 
+    weight = getAvailableWeights();
+    weight_to_string(weight, line);
+    weight_del(weight);
+    printf("currently availble: %s\r\n\r\n\r\n", line);
 
 
     //////////////////////////

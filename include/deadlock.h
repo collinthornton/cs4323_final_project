@@ -11,10 +11,20 @@
 #ifndef DEADLOCK_DETECTION_H
 #define DEADLOCK_DETECTION_H
 
+#include <stdbool.h>
+
 #include "resource_manager.h"
 
 
-pid_t checkForDeadlock();
+/**
+ * @brief Check the input file for deadlocked processes.
+ * @param deadlocked_array (pid_t[]) array with length of number of processes (matrix rows)
+ * @return (int) number of deadlocked processes
+ */
+int checkForDeadlock(pid_t deadlock_array[]);
+
+
+
 
 
 #endif // DEADLOCK_DEFINITION_H

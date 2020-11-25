@@ -35,9 +35,15 @@ typedef struct{
 // FUNCTIONS TO GET WEIGHT REQUESTS FROM FILE
 /**
  * @brief return the gym's total resources. must be deleted with weight_del()
- * @return (Weight*) Vector of weights on heap
+ * @return (Weight*) Vector of total weights
  */
 Weight* getGymResources();
+
+/**
+ * @brief return currently available weights
+ * @return (Weight*) vector of current weight
+ */
+Weight* getAvailableWeights();
 
 
 /**
@@ -52,6 +58,25 @@ WeightMatrix* getWeightRequest();
  * @return (WeightMatrix*) matrix of allocations allocated on heap
  */
 WeightMatrix* getWeightAllocation();
+
+
+/**
+ * @brief removes the request, allocates weights, and adjusts the currently available weights
+ * @param pid (pid_t) process to grant
+ * @return (int) return code. negative on error
+ */
+int grantWeightRequest(pid_t pid);
+
+/**
+ * @brief removes the allocation and adjusts currently available weights
+ * @param pid (pid_t) process id to adjust
+ * @param weight (Weight*) amount to change
+ * @return (int) return code. negative on error
+ */
+int releaseWeightAllocation(pid_t pid, Weight* weight);
+
+
+
 
 
 /**
@@ -118,9 +143,6 @@ const char* weight_matrix_to_string(WeightMatrix *matrix, char buffer[]);
 
 
 
-
-
-
 //////////////////////////////
 //
 //  HELPER FUNCTIONS
@@ -174,13 +196,20 @@ static WeightMatrix* getWeightMatrixFromFile(unsigned int section);
 
 
 /**
- * @brief write a weight matrix to the input file. will delete the file
+ * @brief write a weight matrix to the input file. will delete the matrix
  * @param matrix (WeightMatrix*) matrix to be written
  * @param section (int) section number at which to write
  * @return (int) negative on failure
  */
 static int writeWeightMatrixToFile(WeightMatrix *matrix, int section);
 
+
+/**
+ * @brief get a weight from the input file
+ * @param section (unsigned int) section number from which to read
+ * @return (Weight*) allocation on heap
+ */
+static Weight* getWeightFromFile(unsigned int section);
 
 /**
  * @brief remove all whitespace from a string

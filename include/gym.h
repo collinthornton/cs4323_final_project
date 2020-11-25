@@ -17,6 +17,8 @@
 // #include "trainer.h"
 // #include "client.h"
 
+#define NUMBER_WEIGHTS 8
+
 typedef enum {
     TWO_HALF,
     FIVE,
@@ -30,7 +32,7 @@ typedef enum {
 
 
 typedef struct {
-    unsigned short num_plates[8];                               // Use PlateIndex as index for the array (will help w/ keeping track)
+    int num_plates[NUMBER_WEIGHTS];           // Use PlateIndex as index for the array (will help w/ keeping track)
     float total_weight;                                  // Summation of plate weights
 } Weight;
 
@@ -44,7 +46,7 @@ typedef struct {
 // MAINTAINS THE GYM DATABASE OF RESOURCES
 
 // allocate on heap. Set params as NULL if not available
-Weight* weight_init(short plate_array[8]);
+Weight* weight_init(int plate_array[NUMBER_WEIGHTS]);
 int weight_del(Weight *weight);
 float weight_calc_total_weight(Weight *weight);
 const char* weight_to_string(Weight *weight, char buffer[]);

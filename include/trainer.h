@@ -40,8 +40,10 @@ typedef struct {
 } TrainerList;
 
 
-// EACH CLIENT SHOULD BE ON A DIFFERENT THREAD
+// EACH CLIENT SHOULD BE ON A DIFFERENT PROCESS
 // - should maintain a finite state machine
+
+
 
 
 // Allocate trainer on heap. Init params as NULL if unavailable
