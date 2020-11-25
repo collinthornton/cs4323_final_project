@@ -12,17 +12,17 @@
 #include <stdio.h>
 #include <unistd.h>
 
-
 #include "workout_room.h"
-
-
 #include "resource_manager.h"
 #include "client.h"
 
+#define TEST_WORKOUT_ROOM   // UNCOMMENT TO TEST WITH main()
+
+#ifdef TEST_WORKOUT_ROOM  
 int main(int argc, char** argv) {
     test_resource_manager();
 }
-
+#endif // TEST_WORKOUT_ROOM
 
 void test_resource_manager(void) {   
     char line[1024];
