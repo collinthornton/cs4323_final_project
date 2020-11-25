@@ -14,7 +14,7 @@
 #include "client.h"
 
 
-#define CLIENT_TEST
+// #define CLIENT_TEST
 
 Client* client_init(pid_t pid, ClientState state, struct Trainer* trainer, Couch* couch, Workout* workout) {
     Client* client = (Client*)malloc(sizeof(Client));
