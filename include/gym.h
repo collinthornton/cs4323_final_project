@@ -22,18 +22,35 @@
 
 // MAINTAINS THE GYM DATABASE OF RESOURCES
 typedef struct {
+    Client waitingList[MAX_CLIENTS];
+    Client arrivingList[MAX_CLIENTS];
+    Trainer trainerList[MAX_TRAINERS];
+
+    int len_waiting, len_arriving, len_trainer;
+
+    int maxCouches;
+    int unit_time; // seconds
+} SharedGym;
+
+typedef struct {
     ClientList* waitingList;
     ClientList* arrivingList;
     TrainerList* trainerList;
-    int maxCouches;
-    float unit_time; // seconds
-} Gym;
 
+    int maxCouches;
+    int unit_time; // seconds    
+} Gym;
 
 void open_gym(int numberTrainers, int numberCouches, int numberClients, int useSemaphors);
 int init_shared_gym(int maxCouches);
-Gym* get_shared_gym();
-void clean_shared_gym(Gym* sharedGym);
+Gym* gym_init();
+
+Gym* update_gym(Gym *gym, SharedGym *sharedGym);
+void update_shared_gym(SharedGym* sharedGym, Gym* gym);
+SharedGym* get_shared_gym();
+
+void gym_del(Gym *gym);
+void clean_shared_gym(SharedGym* sharedGym);
 
 
 

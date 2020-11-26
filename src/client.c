@@ -44,12 +44,15 @@ pid_t client_start() {
 int client_proc_state_machine() {
 
     int pid = getpid();
-    Gym *sharedGymObject = get_shared_gym();
 
-    if(sharedGymObject == NULL) {
+    Gym *gym = gym_init();
+    SharedGym *sharedGymObject = get_shared_gym();
+
+    if(gym == NULL || sharedGymObject == NULL) {
         perror("client_proc_state_machine() get_shared_gym");
         return -1;
     }
+
 
     Client *client = client_init(pid, ARRIVING, NULL, NULL, NULL);
 
@@ -61,19 +64,40 @@ int client_proc_state_machine() {
 
         switch(client->state) {
             case ARRIVING:
-                //client_arriving_event(sharedGymObject, client);
+                client_list_add_client(client, gym->arrivingList);
+                update_shared_gym(sharedGymObject, gym);
 
-                sleep(5);
-                client->state = LEAVING;
+                char buffer[BUFFER_SIZE] = "\0";
+                client_list_to_string(gym->arrivingList, buffer);
                 
+                //update_gym(gym, sharedGymObject);
+                //printf("\r\n\r\nchild -> %s\r\n\r\n", buffer);
+                
+                
+                sleep(5); 
+                client_arriving_event(gym, client);               
                 break;
 
             case WAITING:
-
+                //Now check if there is room on the couches
+                
+                /*if(gym->waitingList->len < gym->maxCouches){
+                    //Another semaphore areas
+                    client->state = WAITING;
+                    client_list_add_client(client, gym->waitingList);
+                    //gym->maxCouches++;
+                    //End the semaphore
+                } else {
+                    //No couches available, no trainers available, time to leave
+                    client->state = LEAVING;
+                } */
                 break;
 
             case MOVING:
-
+                    //This is the "traveling" piece, also a semaphore area
+                    //sleep(2*gym->unit_time);
+                    //End the semaphore
+                    client->state = WAITING;
                 break;
 
             case TRAINING:
@@ -91,6 +115,7 @@ int client_proc_state_machine() {
     }
 
     free(client);
+    gym_del(gym);
     clean_shared_gym(sharedGymObject);
     // Remove client from any lists
     // Exit cleanly

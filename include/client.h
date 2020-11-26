@@ -15,6 +15,7 @@
 #include "workout.h"
 #include "gym_resources.h"
 
+#define MAX_CLIENTS 6
 
 typedef enum {
     ARRIVING,

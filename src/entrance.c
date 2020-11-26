@@ -23,7 +23,7 @@
 
 #include "entrance.h"
 
-
+/*
 void open_gym(int numberTrainers, int numberCouches, int numberClients, int useSemaphors){
     //First, established the shared memory object
     init_shared_gym(numberCouches);
@@ -84,7 +84,7 @@ void open_gym(int numberTrainers, int numberCouches, int numberClients, int useS
 
 
 }
-
+*/
 void client_arriving_event(Gym* sharedGym, Client* newClient){
     //First add it to the arriving LL 
     client_list_add_client(newClient, sharedGym->arrivingList);
@@ -109,22 +109,5 @@ void client_arriving_event(Gym* sharedGym, Client* newClient){
 
     //Time to go to the waiting room
     client_list_rem_client(newClient, sharedGym->arrivingList);
-    newClient->state = TRAVELLING;
-    
-    //This is the "traveling" piece, also a semaphore area
-    sleep(3);
-    //End the semaphore
-
-    //Now check if there is room on the couches
-    
-    if(sharedGym->waitingList->len < sharedGym->maxCouches){
-        //Another semaphore areas
-        newClient->state = WAITING;
-        client_list_add_client(newClient, sharedGym->waitingList);
-        sharedGym->maxCouches++;
-        //End the semaphore
-    } else {
-        //No couches available, no trainers available, time to leave
-        newClient->state = LEAVING;
-    }
+    newClient->state = MOVING;
 }

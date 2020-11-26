@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include "client_trainer.h"
 
+#define MAX_TRAINERS 4
 
 typedef enum {
     FREE,

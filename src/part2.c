@@ -17,12 +17,12 @@ void start_part2(){
     //test_deadlock_detection();
 
     int num_couches = 3;
-    init_shared_gym(num_couches);
+    if(init_shared_gym(num_couches) == 1) exit(1);
 
+    Gym *gym = gym_init();
+    SharedGym *sharedGymObject = get_shared_gym();
 
-    Gym *sharedGymObject = get_shared_gym();
-    printf("ARRIVING CLIENT LIST SIZE: %d\r\n", sharedGymObject->arrivingList->len);
-
+    printf("%d\r\n", sharedGymObject->unit_time);
 
     pid_t pids[NUM_CLIENTS];
 
@@ -31,9 +31,20 @@ void start_part2(){
     sleep(1);
 
     char buffer[BUFFER_SIZE*NUM_CLIENTS] = "\0";
-    client_list_to_string(sharedGymObject->arrivingList, buffer);
 
+    update_gym(gym, sharedGymObject);
+    client_list_to_string(gym->arrivingList, buffer);
+    //client_to_string(&sharedGymObject->arrivingList[0], buffer);
+    printf("\r\n\r\nARRIVING LIST\r\n");
     printf("%s\r\n", buffer);
+
+
+    update_gym(gym, sharedGymObject);
+    client_list_to_string(gym->waitingList, buffer);
+    //client_list_to_string(sharedGymObject->waitingList, buffer);
+    printf("\r\n\r\nWAITING LIST\r\n");
+    printf("%s\r\n", buffer);
+    gym_del(gym);
     clean_shared_gym(sharedGymObject);
 }
 
