@@ -141,6 +141,15 @@ void update_shared_gym(SharedGym *sharedGym, Gym *gym) {
 
 
 Gym* update_gym(Gym *gym, SharedGym *sharedGym)  {
+    // Easiest to just delete everything and start from scratch
+    client_list_del(gym->arrivingList);
+    client_list_del(gym->waitingList);
+    trainer_list_del(gym->trainerList);
+
+    gym->arrivingList = client_list_init();
+    gym->waitingList = client_list_init();
+    gym->trainerList = trainer_list_init();
+
     gym->maxCouches = sharedGym->maxCouches;
     gym->unit_time = sharedGym->unit_time;
 
