@@ -19,6 +19,7 @@
 typedef enum {
     ARRIVING,
     WAITING,
+    MOVING,
     TRAINING,
     LEAVING
 } ClientState;
@@ -47,9 +48,12 @@ typedef struct {
 
 // EACH CLIENT SHOULD BE ON A DIFFERENT THREAD
 // - should maintain a finite state machine
+pid_t client_start();
+int client_proc_state_machine();
 
 
-// Allocate client on heap. Init params as NULL if unavailable
+
+// Allocate client struct on heap. Init params as NULL if unavailable
 Client* client_init(pid_t pid, ClientState state, Trainer* trainer, Couch *couch, Workout *workout);
 int client_del(Client* client);
 const char* client_to_string(Client *client, char buffer[]);
@@ -63,5 +67,8 @@ int client_list_rem_client(Client *client, ClientList *list);
 const char* client_list_to_string(ClientList *list, char buffer[]);
 
 ClientNode* client_list_srch(Client *client, ClientList *list);
+
+
+void test_client_list();
 
 #endif // CLIENT_H

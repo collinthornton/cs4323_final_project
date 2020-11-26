@@ -13,8 +13,6 @@
 #include "trainer.h"
 
 
-// #define TRAINER_TEST  // UNCOMMENT TO TEST WITH main()
-
 Trainer* trainer_init(pid_t pid, TrainerState state, Client* client) {
     Trainer* trainer = (Trainer*)malloc(sizeof(Trainer));
 
@@ -210,10 +208,7 @@ TrainerNode* trainer_list_srch(Trainer *trainer, TrainerList *list) {
 }
 
 
-
-#ifdef TRAINER_TEST
-
-int main(int argc, char** argv) {
+void test_trainer_list() {
     printf("\r\n");
 
     Trainer *trainer_one = trainer_init(1, FREE, NULL);
@@ -251,10 +246,3 @@ int main(int argc, char** argv) {
     trainer_del(trainer_three);
     trainer_list_del(trainer_list);
 }
-
-#endif // CLIENT_TEST
-#include "trainer.h"
-
-
-// #define TRAINER_TEST // UNCOMMENT TO TEST WITH main()
-

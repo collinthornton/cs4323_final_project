@@ -26,6 +26,7 @@ typedef struct {
     ClientList* arrivingList;
     TrainerList* trainerList;
     int maxCouches;
+    float unit_time; // seconds
 } Gym;
 
 

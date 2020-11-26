@@ -10,11 +10,104 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 #include "client.h"
+#include "gym.h"
+#include "entrance.h"
 
 
-// #define CLIENT_TEST  // UNCOMMENT TO TEST WITH main()
+//////////////////////////////
+//
+// Client process functions
+//
+
+pid_t client_start() {
+    pid_t pid = fork();
+
+    printf("pid: %d\r\n", getpid());
+    
+    if(pid < 0) {
+        perror("client_start() fork");
+        return pid;
+    }
+    else if(pid == 0) {
+        int ret = client_proc_state_machine();
+        exit(ret);
+    } else {
+        return pid;
+    }
+}
+
+int client_proc_state_machine() {
+
+    int pid = getpid();
+    Gym *sharedGymObject = get_shared_gym();
+
+    if(sharedGymObject == NULL) {
+        perror("client_proc_state_machine() get_shared_gym");
+        return -1;
+    }
+
+    Client *client = client_init(pid, ARRIVING, NULL, NULL, NULL);
+
+    bool shutdown = false;
+
+
+    while(!shutdown) {
+        // Execute state machine
+
+        switch(client->state) {
+            case ARRIVING:
+                //client_arriving_event(sharedGymObject, client);
+
+                sleep(5);
+                client->state = LEAVING;
+                
+                break;
+
+            case WAITING:
+
+                break;
+
+            case MOVING:
+
+                break;
+
+            case TRAINING:
+
+                break;
+
+            case LEAVING:
+                shutdown = true;
+
+                // DO OTHER THINGS
+                break;
+        }
+
+        // update shared memory
+    }
+
+    free(client);
+    clean_shared_gym(sharedGymObject);
+    // Remove client from any lists
+    // Exit cleanly
+
+    return 0;
+}
+
+
+
+
+
+
+//////////////////////////////
+//
+// Client struct functions
+//
+
 
 Client* client_init(pid_t pid, ClientState state, Trainer* trainer, Couch* couch, Workout* workout) {
     Client* client = (Client*)malloc(sizeof(Client));
@@ -47,6 +140,15 @@ const char* client_to_string(Client *client, char buffer[]) {
     //sprintf(buffer + strlen(buffer), "   workout: %ld", client->workout);
     return buffer;
 }
+
+
+
+
+
+//////////////////////////////
+//
+// Client list functions
+//
 
 ClientList* client_list_init() {
     ClientList* list = (ClientList*)malloc(sizeof(ClientList));
@@ -180,9 +282,14 @@ ClientNode* client_list_srch(Client *client, ClientList *list) {
 
 
 
-#ifdef CLIENT_TEST
 
-int main(int argc, char** argv) {
+
+//////////////////////////////
+//
+// Client test function
+//
+
+void test_client_list() {
     printf("\r\n");
 
     Client *client_one = client_init(1, ARRIVING, NULL, NULL, NULL);
@@ -212,5 +319,3 @@ int main(int argc, char** argv) {
     client_del(client_two);
     client_list_del(client_list);
 }
-
-#endif // CLIENT_TEST

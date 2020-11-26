@@ -21,6 +21,7 @@
 
 #include "gym.h"
 
+#define UNIT_TIME 0.5       // Seconds
 
 //////////////////////////////
 //
@@ -57,6 +58,7 @@ int init_shared_gym(int maxCouches){
     sharedGym->trainerList = trainer_list_init();
     sharedGym->waitingList = client_list_init();
     sharedGym->maxCouches = maxCouches;
+    sharedGym->unit_time = UNIT_TIME;
 
     if (shmdt(sharedGym) == -1){
         printf("Something happened trying to detach from shared memory\n");
@@ -97,6 +99,10 @@ Gym* get_shared_gym(){
 }
 
 void clean_shared_gym(Gym* sharedGym){
+    client_list_del(sharedGym->arrivingList);
+    client_list_del(sharedGym->waitingList);
+    trainer_list_del(sharedGym->trainerList);
+
     if (shmdt(sharedGym) == -1){
         printf("Something happened trying to detach from shared memory\n");
         return;

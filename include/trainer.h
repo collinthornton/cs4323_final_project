@@ -17,8 +17,8 @@
 typedef enum {
     FREE,
     ON_PHONE,
-    WITH_CLIENT,
-    TRAVELLING
+    TRAVELLING,
+    WITH_CLIENT
 } TrainerState;
 
 struct Trainer {
@@ -64,5 +64,8 @@ Trainer* trainer_list_find_phone(TrainerList *list);
 const char* trainer_list_to_string(TrainerList *list, char buffer[]);
 
 TrainerNode* trainer_list_srch(Trainer *trainer, TrainerList *list);
+
+
+void test_trainer_list(void);
 
 #endif // TRAINER_H

@@ -24,6 +24,8 @@
 int checkForDeadlock(pid_t deadlock_array[]);
 
 
+void test_deadlock_detection(void);
+
 
 
 

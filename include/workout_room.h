@@ -8,11 +8,14 @@
 // ########################################## 
 
 
+
 #ifndef WORKOUT_ROOM_H
 #define WORKOUT_ROOM_H
 
-void test_resource_manager(void);
+void start_workout_room(void);
 
 
+
+void test_workout_room(void);
 
 #endif // WORKOUT_ROOM_H
