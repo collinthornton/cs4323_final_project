@@ -14,7 +14,7 @@
 #include "deadlock.h"
 #include "vector.h"
 
-#define TEST_DEADLOCK_DETECTION // UNCOMMENT TO TEST DEADLOCK DETECTION WITH main()
+//#define TEST_DEADLOCK_DETECTION // UNCOMMENT TO TEST DEADLOCK DETECTION WITH main()
 
 
 int checkForDeadlock(pid_t deadlock_array[]) {
