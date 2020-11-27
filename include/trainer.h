@@ -11,21 +11,22 @@
 #define TRAINER_H
 
 #include <stdlib.h>
-#include "client_trainer.h"
+#include <sys/wait.h>
 
+#define MAX_TRAINERS 4
 
 typedef enum {
     FREE,
     ON_PHONE,
-    WITH_CLIENT,
-    TRAVELLING
+    TRAVELLING,
+    WITH_CLIENT
 } TrainerState;
 
-struct Trainer {
+typedef struct Trainer {
     pid_t pid;
+    pid_t client_pid;
     TrainerState state;
-    Client* current_client;
-};
+} Trainer;
 
 typedef struct TrainerNode {
     Trainer* node;
@@ -47,22 +48,26 @@ typedef struct {
 
 
 // Allocate trainer on heap. Init params as NULL if unavailable
-Trainer* trainer_init(pid_t pid, TrainerState state, Client* client);
+Trainer* trainer_init(pid_t pid, pid_t client_pid, TrainerState state);
 int trainer_del(Trainer* trainer);
 const char* trainer_to_string(Trainer *trainer, char buffer[]);
 
 
 TrainerList* trainer_list_init();
 int trainer_list_del(TrainerList *list);
+int trainer_list_del_trainers(TrainerList *list);
 int trainer_list_add_trainer(Trainer *trainer, TrainerList* list);
 int trainer_list_rem_trainer(Trainer *trainer, TrainerList *list);
 
-Trainer* trainer_list_find_client(Client *client, TrainerList *list);
+Trainer* trainer_list_find_client(pid_t client_pid, TrainerList *list);
 Trainer* trainer_list_find_available(TrainerList *list);
 Trainer* trainer_list_find_phone(TrainerList *list);
 
 const char* trainer_list_to_string(TrainerList *list, char buffer[]);
 
 TrainerNode* trainer_list_srch(Trainer *trainer, TrainerList *list);
+
+
+void test_trainer_list(void);
 
 #endif // TRAINER_H

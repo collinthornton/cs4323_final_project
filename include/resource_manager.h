@@ -219,6 +219,6 @@ static Weight* getWeightFromFile(unsigned int section);
 static char* removeWhiteSpace(char* str);
 
 
-
+void test_resource_manager();
 
 #endif // RESOURCE_MANAGER_H

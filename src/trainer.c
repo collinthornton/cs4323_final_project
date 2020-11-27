@@ -13,9 +13,7 @@
 #include "trainer.h"
 
 
-// #define TRAINER_TEST  // UNCOMMENT TO TEST WITH main()
-
-Trainer* trainer_init(pid_t pid, TrainerState state, Client* client) {
+Trainer* trainer_init(pid_t pid, pid_t client_pid, TrainerState state) {
     Trainer* trainer = (Trainer*)malloc(sizeof(Trainer));
 
     if(trainer == NULL) {
@@ -25,12 +23,14 @@ Trainer* trainer_init(pid_t pid, TrainerState state, Client* client) {
 
     trainer->pid = pid;
     trainer->state = state;
-    trainer->current_client = client;
+    trainer->client_pid = client_pid;
     return trainer;
 }
 
 
 int trainer_del(Trainer* trainer) {   
+    if(trainer == NULL) return -1;
+
     free(trainer);
     return 0;
 }
@@ -56,6 +56,18 @@ TrainerList* trainer_list_init() {
     list->TAIL = NULL;
     list->len = 0;
     return list;
+}
+
+int trainer_list_del_trainers(TrainerList *list) {
+    if(list == NULL) return 0;
+
+    TrainerNode *tmp = list->HEAD;
+
+    while(tmp != NULL) {
+        trainer_del(tmp->node);
+        tmp = tmp->next;
+    }
+    return 0;
 }
 
 int trainer_list_del(TrainerList *list) {
@@ -164,12 +176,12 @@ const char* trainer_list_to_string(TrainerList* list, char buffer[]) {
 
 
 
-Trainer* trainer_list_find_client(Client *client, TrainerList *list) {
-    if(list == NULL || client == NULL) return NULL;
+Trainer* trainer_list_find_client(pid_t client_pid, TrainerList *list) {
+    if(list == NULL || client_pid < 0) return NULL;
 
     TrainerNode *tmp = list->HEAD;
     while(tmp != NULL) {
-        if(tmp->node->current_client == client) return tmp->node;
+        if(tmp->node->client_pid == client_pid) return tmp->node;
         tmp = tmp->next;
     }
     return NULL;
@@ -210,15 +222,12 @@ TrainerNode* trainer_list_srch(Trainer *trainer, TrainerList *list) {
 }
 
 
-
-#ifdef TRAINER_TEST
-
-int main(int argc, char** argv) {
+void test_trainer_list() {
     printf("\r\n");
 
-    Trainer *trainer_one = trainer_init(1, FREE, NULL);
-    Trainer *trainer_two = trainer_init(2, FREE, NULL);
-    Trainer *trainer_three = trainer_init(3, FREE, NULL);
+    Trainer *trainer_one = trainer_init(1, 0, FREE);
+    Trainer *trainer_two = trainer_init(2, 0, FREE);
+    Trainer *trainer_three = trainer_init(3, 0, FREE);
 
     TrainerList *trainer_list = trainer_list_init();
     trainer_list_add_trainer(trainer_one, trainer_list);
@@ -251,10 +260,3 @@ int main(int argc, char** argv) {
     trainer_del(trainer_three);
     trainer_list_del(trainer_list);
 }
-
-#endif // CLIENT_TEST
-#include "trainer.h"
-
-
-// #define TRAINER_TEST // UNCOMMENT TO TEST WITH main()
-

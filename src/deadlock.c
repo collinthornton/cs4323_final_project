@@ -14,8 +14,6 @@
 #include "deadlock.h"
 #include "vector.h"
 
-//#define TEST_DEADLOCK_DETECTION // UNCOMMENT TO TEST DEADLOCK DETECTION WITH main()
-
 
 int checkForDeadlock(pid_t deadlock_array[]) {
     // BASED ON ALGORITHM DESCRIBED ON PG 339 OF TEXTBOOK
@@ -91,10 +89,7 @@ int checkForDeadlock(pid_t deadlock_array[]) {
 
 
 
-
-#ifdef TEST_DEADLOCK_DETECTION
-
-int main(int argc, char** argv) {
+void test_deadlock_detection() {
     // WE WILL ASSUME THE WEIGHT FILE IS PRELOADED AND AS SUCH NOT CLEAR IT
 
     WeightMatrix *allocation = getWeightAllocation();
@@ -110,7 +105,9 @@ int main(int argc, char** argv) {
     for(int i=0; i<num_deadlocked; ++i) {
         printf("%d\r\n", deadlock_array[i]);
     }
-    printf("\r\n");
+
+    if(num_deadlocked == 0) printf("NO DEADLOCKED PROCESSES\r\n");
+    printf("\r\n");    
 }
 
-#endif // TEST_DEADLOCK_DETECTION
+
