@@ -12,6 +12,7 @@
 #define GYM_H
 
 #include <stdbool.h>
+#include <fcntl.h>
 
 #include "trainer.h"
 #include "client.h"
@@ -19,8 +20,7 @@
 #define SHARED_KEY 0x1234
 #define BUFFER_SIZE 1024
 
-
-sem_t shared_gym_sem;
+sem_t *shared_gym_sem;
 
 // MAINTAINS THE GYM DATABASE OF RESOURCES
 typedef struct {
@@ -55,6 +55,7 @@ void open_shared_gym();
 
 void gym_del(Gym *gym);
 void close_shared_gym();
+void destroy_shared_gym();
 
 Client* copy_client(Client *dest, Client *src);
 Trainer* copy_trainer(Trainer* dest, Trainer *src);

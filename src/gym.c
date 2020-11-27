@@ -29,10 +29,18 @@
 //
 
 static SharedGym *sharedGym;
+static char SHARED_GYM_SEM_NAME[] = "/sem_shmem_gym";
+static bool sem_opened = false;
 
 
 int init_shared_gym(int maxCouches){
-    //SharedGym *sharedGym;
+    shared_gym_sem = sem_open(SHARED_GYM_SEM_NAME, O_CREAT | O_EXCL, 0644, 1);
+    if(shared_gym_sem == SEM_FAILED) {
+        perror("init_shared_gym sem_failed_to_open");
+        exit(1);
+    }
+    
+    sem_opened = true;
 
     int sharedMemoryID;
     int *sharedMemoryAddress;
@@ -46,11 +54,11 @@ int init_shared_gym(int maxCouches){
     }
 
     // TAKE THE SEMAPHORE
-    sem_wait(&shared_gym_sem);
+    sem_wait(shared_gym_sem);
     sharedGym = shmat(sharedMemoryID, NULL, 0);
 
     if (sharedGym == (void *) -1){
-        sem_post(&shared_gym_sem);
+        sem_post(shared_gym_sem);
         printf("Could not attached to the shared memory\n");
         return 1;
     }
@@ -70,13 +78,13 @@ int init_shared_gym(int maxCouches){
     sharedGym->len_trainer = 0;
 
     if (shmdt(sharedGym) == -1){
-        sem_post(&shared_gym_sem);
+        sem_post(shared_gym_sem);
         printf("Something happened trying to detach from shared memory\n");
         return 1;
     }
  
     // RELEASE THE SEMAPHORE
-    sem_post(&shared_gym_sem);
+    sem_post(shared_gym_sem);
  
     return 0;
 }
@@ -94,6 +102,14 @@ Gym* gym_init() {
 }
 
 void open_shared_gym(){
+    if(sem_opened == false)
+        shared_gym_sem = sem_open(SHARED_GYM_SEM_NAME, O_CREAT, 0644, 1);
+
+    if(shared_gym_sem == SEM_FAILED) {
+        perror("open_shared_gym sem_failed");
+        exit(1);
+    }
+
     //First get shared object from memory
     int sharedMemoryID;
     int *sharedMemoryAddress;
@@ -107,24 +123,24 @@ void open_shared_gym(){
     }
 
     // TAKE THE SEMAPHORE
-    sem_wait(&shared_gym_sem);
+    sem_wait(shared_gym_sem);
 
     sharedGym = shmat(sharedMemoryID, NULL, 0);
 
     if (sharedGym == (void *) -1){
-        sem_post(&shared_gym_sem);
+        sem_post(shared_gym_sem);
         printf("Could not attached to the shared memory\n");
         return;
     }    
 
     // RELEASE THE SEMAPHORE
-    sem_post(&shared_gym_sem);
+    sem_post(shared_gym_sem);
     return;
 }
 
 
 void update_shared_gym(Gym *gym) {
-    sem_wait(&shared_gym_sem);
+    sem_wait(shared_gym_sem);
 
     sharedGym->unit_time = gym->unit_time;
     sharedGym->maxCouches = gym->maxCouches;
@@ -173,7 +189,7 @@ void update_shared_gym(Gym *gym) {
         ttmp = ttmp->next;
     }
 
-    sem_post(&shared_gym_sem);
+    sem_post(shared_gym_sem);
 }
 
 
@@ -195,7 +211,7 @@ Gym* update_gym(Gym *gym)  {
     gym->trainerList = trainer_list_init();
 
 
-    sem_wait(&shared_gym_sem);
+    sem_wait(shared_gym_sem);
 
     gym->maxCouches = sharedGym->maxCouches;
     gym->unit_time = sharedGym->unit_time;
@@ -221,7 +237,7 @@ Gym* update_gym(Gym *gym)  {
         trainer_list_add_trainer(trainer, gym->trainerList);  
     }  
 
-    sem_post(&shared_gym_sem);
+    sem_post(shared_gym_sem);
 }
 
 
@@ -238,24 +254,26 @@ void gym_del(Gym *gym) {
     free(gym);
 }
 
-void close_shared_gym(){
-    int sharedMemoryID = shmget(SHARED_KEY, sizeof(SharedGym), IPC_CREAT|0644);
-    
-    sem_wait(&shared_gym_sem);
+void close_shared_gym(){   
+    sem_wait(shared_gym_sem);
     if (shmdt(sharedGym) == -1){
         printf("Something happened trying to detach from shared memory\n");
-        sem_post(&shared_gym_sem);
         return;
     }      
+    sem_post(shared_gym_sem);
+    sem_close(shared_gym_sem);
+}
 
+void destroy_shared_gym() {
+    int sharedMemoryID = shmget(SHARED_KEY, sizeof(SharedGym), IPC_CREAT|0644);
+    
     if (shmctl(sharedMemoryID,IPC_RMID,0) == -1){
         // It's already been closed by another process. Just ignore.
-        //printf("Something went wrong with the shmctl function\n");
-        sem_post(&shared_gym_sem);
+        printf("Something went wrong with the shmctl function\n");
         return;
     }    
 
-    sem_post(&shared_gym_sem);
+    sem_unlink(SHARED_GYM_SEM_NAME);
 }
 
 

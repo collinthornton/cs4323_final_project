@@ -20,11 +20,11 @@
 
 #define NUM_CLIENTS MAX_CLIENTS
 
-
+#define NUM_COUCHES 3
 
 
 void start_part2(){
-    sem_init(&shared_gym_sem, 1, 1);
+    if(init_shared_gym(NUM_COUCHES) == 1) exit(1);
 
     //First open the gym, but do not use semaphores
     //open_gym(3,3,5,0);
@@ -32,12 +32,11 @@ void start_part2(){
 
     //test_deadlock_detection();
     test_part2();
+    destroy_shared_gym();
 }
 
 
 void test_part2() {
-    int num_couches = 3;
-    if(init_shared_gym(num_couches) == 1) exit(1);
 
     pid_t pids[NUM_CLIENTS];
 

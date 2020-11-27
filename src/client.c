@@ -80,7 +80,7 @@ int client_proc_state_machine() {
                 client = client_list_find_pid(pid, gym->arrivingList);
                 client_list_to_string(gym->arrivingList, buffer);
                 
-                printf("\r\n CHILD ARRIVING LIST (%d) \r\n%s\r\n", getpid(), buffer);
+                //printf("\r\n CHILD ARRIVING LIST (%d) \r\n%s\r\n", getpid(), buffer);
                 //printf("child trainer pid -> %d\r\n\r\n", gym->arrivingList->HEAD->node->current_trainer.pid);
                 
                 client->state = LEAVING;

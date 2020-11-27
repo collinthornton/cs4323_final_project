@@ -90,7 +90,7 @@ void client_arriving_event(Gym* sharedGym, Client* newClient){
     client_list_add_client(newClient, sharedGym->arrivingList);
 
     //Next, check to see if a trainer grabbed the client
-    if (trainer_list_find_client(newClient, sharedGym->trainerList) != NULL){
+    if (trainer_list_find_client(newClient->pid, sharedGym->trainerList) != NULL){
         //We are done here.
         return;
     }
@@ -101,7 +101,7 @@ void client_arriving_event(Gym* sharedGym, Client* newClient){
         client_list_rem_client(newClient, sharedGym->arrivingList);
 
         newClient->state = TRAINING;
-        trainer->current_client = newClient;
+        trainer->client_pid = newClient->pid;
         trainer->state = WITH_CLIENT;
         
         return;

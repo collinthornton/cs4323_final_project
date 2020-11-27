@@ -37,18 +37,18 @@ int client_workout_event(Gym *gym, SharedGym *shGym, Client *client) {
         return -1;
     }
 
-    update_gym(gym, shGym);
+    update_gym(gym);
     client_list_rem_client(client, gym->arrivingList);
     client_list_rem_client(client, gym->waitingList);
     client_list_add_client(client, gym->workoutList);
-    update_shared_gym(shGym, gym);
+    update_shared_gym(gym);
 
     //Workout *workout = client_get_workout();
     //client->workout = workout;
 
     //Weight* weights = client_get_weights();
     //workout->in_use = weights;
-    update_shared_gym(shGym, gym);
+    update_shared_gym(gym);
 
     //for(int i=0; i<workout->total_weight; ++i) {
     //    client_lift_weights();
@@ -64,7 +64,7 @@ int trainer_workout_event(Gym *gym, SharedGym *shGym, Trainer *trainer) {
         perror("trainer_workout_event invalid_argument");
         return -1;
     }
-    if(trainer->current_client == NULL) {
+    if(trainer->client_pid <= 0) {
         perror("trainer_workout_event no client");
         return -1;
     }
