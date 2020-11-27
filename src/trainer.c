@@ -58,13 +58,13 @@ TrainerList* trainer_list_init() {
     return list;
 }
 
-int trainer_list_del_trainers(TrainerList *list) {
+int trainer_list_del_trainers(pid_t exclude, TrainerList *list) {
     if(list == NULL) return 0;
 
     TrainerNode *tmp = list->HEAD;
 
     while(tmp != NULL) {
-        trainer_del(tmp->node);
+        if(tmp->node->pid != exclude) trainer_del(tmp->node);
         tmp = tmp->next;
     }
     return 0;
@@ -209,6 +209,16 @@ Trainer* trainer_list_find_available(TrainerList *list) {
     return NULL;
 }
 
+Trainer* trainer_list_find_pid(pid_t pid, TrainerList *list) {
+    if(list == NULL) return NULL;
+
+    TrainerNode *tmp = list->HEAD;
+    while(tmp != NULL) {
+        if(tmp->node->pid == pid) return tmp->node;
+        tmp = tmp->next;
+    }
+    return NULL;
+}
 
 TrainerNode* trainer_list_srch(Trainer *trainer, TrainerList *list) {
     if (trainer == NULL || list == NULL) return NULL;

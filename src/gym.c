@@ -139,15 +139,20 @@ void open_shared_gym(){
 }
 
 
+//TODO This can't wipe out the old data. Only update data if pid's are equivalent
 void update_shared_gym(Gym *gym) {
+    //! CANNOT MODIFY OTHER PROCESS STATES
+    
     sem_wait(shared_gym_sem);
 
-    sharedGym->unit_time = gym->unit_time;
-    sharedGym->maxCouches = gym->maxCouches;
-    sharedGym->len_arriving = gym->arrivingList->len;
-    sharedGym->len_waiting = gym->waitingList->len;
-    sharedGym->len_workout = gym->workoutList->len;
-    sharedGym->len_trainer = gym->trainerList->len;
+    //sharedGym->unit_time = gym->unit_time;
+    //sharedGym->maxCouches = gym->maxCouches;
+    //sharedGym->len_arriving = gym->arrivingList->len;
+    //sharedGym->len_waiting = gym->waitingList->len;
+    //sharedGym->len_workout = gym->workoutList->len;
+    //sharedGym->len_trainer = gym->trainerList->len;
+
+    //! WORK HERE
 
     ClientNode *tmp = gym->arrivingList->HEAD;
     for(int i=0; i<sharedGym->len_arriving; ++i) {
@@ -192,13 +197,24 @@ void update_shared_gym(Gym *gym) {
     sem_post(shared_gym_sem);
 }
 
-
 Gym* update_gym(Gym *gym)  {
+    //! CANNOT MODIFY CURRENT PROCESS STATE
     // Easiest to just delete everything and start from scratch
-    client_list_del_clients(gym->arrivingList);
-    client_list_del_clients(gym->waitingList);
-    client_list_del_clients(gym->workoutList);
-    trainer_list_del_trainers(gym->trainerList);
+
+    Client *client = client_list_find_pid(getpid(), gym->arrivingList);
+    if(client == NULL) client = client_list_find_pid(getpid(), gym->waitingList);
+    if(client == NULL) client = client_list_find_pid(getpid(), gym->workoutList);
+
+    Trainer *trainer = NULL;
+    if(client == NULL) trainer = trainer_list_find_pid(getpid(), gym->trainerList);
+
+    bool is_client = (client == NULL) ? false : true;
+
+    // Spare current process from deletion
+    client_list_del_clients(getpid(), gym->arrivingList);
+    client_list_del_clients(getpid(), gym->waitingList);
+    client_list_del_clients(getpid(), gym->workoutList);
+    trainer_list_del_trainers(getpid(), gym->trainerList);
 
     client_list_del(gym->arrivingList);
     client_list_del(gym->waitingList);
@@ -216,37 +232,65 @@ Gym* update_gym(Gym *gym)  {
     gym->maxCouches = sharedGym->maxCouches;
     gym->unit_time = sharedGym->unit_time;
 
+    // Update everything with differnt pid
     for(int i=0; i<sharedGym->len_arriving; ++i) {
-        Client *client = client_init(0, ARRIVING, NULL, NULL, NULL);
-        copy_client(client, &sharedGym->arrivingList[i]);
-        client_list_add_client(client, gym->arrivingList);
+        if(sharedGym->arrivingList[i].pid != getpid()) {
+            Client *client = client_init(0, ARRIVING, NULL, NULL, NULL);
+            copy_client(client, &sharedGym->arrivingList[i]);
+            client_list_add_client(client, gym->arrivingList);
+        }
     }
     for(int i=0; i<sharedGym->len_waiting; ++i) {
-        Client *client = client_init(0, ARRIVING, NULL, NULL, NULL);
-        copy_client(client, &sharedGym->waitingList[i]);
-        client_list_add_client(client, gym->waitingList);
+        if(sharedGym->waitingList[i].pid != getpid()) {
+            Client *client = client_init(0, ARRIVING, NULL, NULL, NULL);
+            copy_client(client, &sharedGym->waitingList[i]);
+            client_list_add_client(client, gym->waitingList);
+        }
     }
     for(int i=0; i<sharedGym->len_workout; ++i) {
-        Client *client = client_init(0, ARRIVING, NULL, NULL, NULL);
-        copy_client(client, &sharedGym->workoutList[i]);
-        client_list_add_client(client, gym->workoutList);
+        if(sharedGym->workoutList[i].pid != getpid()) {
+            Client *client = client_init(0, ARRIVING, NULL, NULL, NULL);
+            copy_client(client, &sharedGym->workoutList[i]);
+            client_list_add_client(client, gym->workoutList);
+        }
     }
     for(int i=0; i<sharedGym->len_trainer; ++i) {
-        Trainer *trainer = trainer_init(-1, -1, FREE);
-        copy_trainer(trainer, &sharedGym->trainerList[i]);
-        trainer_list_add_trainer(trainer, gym->trainerList);  
+        if(sharedGym->trainerList[i].pid != getpid()) {
+            Trainer *trainer = trainer_init(-1, -1, FREE);
+            copy_trainer(trainer, &sharedGym->trainerList[i]);
+            trainer_list_add_trainer(trainer, gym->trainerList);  
+        }
     }  
 
     sem_post(shared_gym_sem);
+
+
+    // update current process
+    if(is_client) {
+        switch(client->state) {
+            case WAITING:
+                client_list_add_client(client, gym->waitingList);
+                break;
+            case TRAINING:
+                client_list_add_client(client, gym->workoutList);
+                break;
+            case ARRIVING:
+                client_list_add_client(client, gym->arrivingList);
+                break;
+        }
+    }
+    else {
+        trainer_list_add_trainer(trainer, gym->trainerList);
+    }
 }
 
 
 
 void gym_del(Gym *gym) {
-    client_list_del_clients(gym->arrivingList);
-    client_list_del_clients(gym->waitingList);
-    client_list_del_clients(gym->workoutList);
-    trainer_list_del_trainers(gym->trainerList);    
+    client_list_del_clients(-1, gym->arrivingList);
+    client_list_del_clients(-1, gym->waitingList);
+    client_list_del_clients(-1, gym->workoutList);
+    trainer_list_del_trainers(-1, gym->trainerList);    
     client_list_del(gym->arrivingList);
     client_list_del(gym->waitingList);
     client_list_del(gym->workoutList);

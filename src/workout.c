@@ -25,7 +25,7 @@ Workout* workout_init(int total_sets, int sets_left, int total_weight, Weight *w
     workout->total_weight = total_sets;
     workout->sets_left = sets_left;
     workout->total_weight = total_weight;
-    workout->in_use = weight;
+    workout->in_use = *weight;
 
     return workout;
 }
@@ -33,7 +33,7 @@ Workout* workout_init(int total_sets, int sets_left, int total_weight, Weight *w
 
 int workout_del(Workout *workout) {
     if(workout == NULL) return -1;
-    weight_del(workout->in_use);
+    //weight_del(workout->in_use);
     free(workout);
     return 0;
 }

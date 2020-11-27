@@ -118,6 +118,7 @@ int client_proc_state_machine() {
                 break;
 
             case TRAINING:
+                client_workout_event();
 
                 break;
 
@@ -250,13 +251,13 @@ ClientList* client_list_init() {
     return list;
 }
 
-int client_list_del_clients(ClientList *list) {
+int client_list_del_clients(pid_t exclude, ClientList *list) {
     if(list == NULL) return 0;
 
     ClientNode *tmp = list->HEAD;
 
     while(tmp != NULL) {
-        client_del(tmp->node);
+        if(tmp->node->pid != exclude) client_del(tmp->node);
         tmp = tmp->next;
     }
     return 0;

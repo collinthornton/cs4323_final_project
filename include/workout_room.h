@@ -20,8 +20,8 @@
 void start_workout_room(void);
 
 
-int client_workout_event(Gym *gym, SharedGym *shGym,  Client *client);
-int trainer_workout_event(Gym *gym, SharedGym *shGym, Trainer *trainer);
+int client_workout_event(Gym *gym, Client *client);
+int trainer_workout_event(Gym *gym, Trainer *trainer);
 
 int init_shared_workout(int maxWeight);
 int trainer_set_worktout();

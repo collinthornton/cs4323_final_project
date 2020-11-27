@@ -26,7 +26,6 @@
 void start_part2(){
     if(init_shared_gym(NUM_COUCHES) == 1) exit(1);
 
-    //First open the gym, but do not use semaphores
     //open_gym(3,3,5,0);
     //test_workout_room();
 

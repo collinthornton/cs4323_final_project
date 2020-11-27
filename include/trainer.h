@@ -55,13 +55,14 @@ const char* trainer_to_string(Trainer *trainer, char buffer[]);
 
 TrainerList* trainer_list_init();
 int trainer_list_del(TrainerList *list);
-int trainer_list_del_trainers(TrainerList *list);
+int trainer_list_del_trainers(pid_t exclude, TrainerList *list);
 int trainer_list_add_trainer(Trainer *trainer, TrainerList* list);
 int trainer_list_rem_trainer(Trainer *trainer, TrainerList *list);
 
 Trainer* trainer_list_find_client(pid_t client_pid, TrainerList *list);
 Trainer* trainer_list_find_available(TrainerList *list);
 Trainer* trainer_list_find_phone(TrainerList *list);
+Trainer* trainer_list_find_pid(pid_t pid, TrainerList *list);
 
 const char* trainer_list_to_string(TrainerList *list, char buffer[]);
 

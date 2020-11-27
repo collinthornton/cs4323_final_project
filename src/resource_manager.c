@@ -371,7 +371,7 @@ int grantWeightRequest(pid_t pid) {
     vector_subtract(request->weight->num_plates, request->weight->num_plates, NUMBER_WEIGHTS);
     
     if(vector_less_than_equal(allocation->weight->num_plates, currently_availble->num_plates, NUMBER_WEIGHTS) == false) {
-        perror("grantWeightRequest() allocation out of bounds");
+        //perror("grantWeightRequest() allocation out of bounds");
         weight_matrix_del(tot_allocation);
         weight_matrix_del(tot_request);
         weight_del(currently_availble);
