@@ -18,7 +18,8 @@
 #include "workout_room.h"
 #include "deadlock.h"
 
-#define NUM_CLIENTS 1
+#define NUM_CLIENTS MAX_CLIENTS
+
 
 
 
@@ -40,26 +41,28 @@ void test_part2() {
 
     pid_t pids[NUM_CLIENTS];
 
+    printf("parent pid: %d\r\n", getpid());
     for(int i=0; i<NUM_CLIENTS; ++i) pids[i] = client_start();
 
     Gym *gym = gym_init();
-    SharedGym *sharedGymObject = get_shared_gym();
-    printf("%d\r\n", sharedGymObject->unit_time);
+    open_shared_gym();
+    update_gym(gym);
+    printf("%d\r\n", gym->unit_time);
 
 
-    sleep(1);
+    sleep(2);
 
     char buffer[BUFFER_SIZE*(NUM_CLIENTS+1)] = "\0";
 
-    update_gym(gym, sharedGymObject);
+    update_gym(gym);
     client_list_to_string(gym->arrivingList, buffer);
 
     printf("\r\n\r\nARRIVING LIST\r\n");
     printf("%s\r\n", buffer);
-    printf("parent trainer id -> %d\r\n", sharedGymObject->arrivingList[0].current_trainer.pid);
+    printf("parent trainer id -> %d\r\n", gym->arrivingList->HEAD->node->current_trainer.pid);
 
 
-    update_gym(gym, sharedGymObject);
+    update_gym(gym);
     client_list_to_string(gym->waitingList, buffer);
 
     printf("\r\n\r\nWAITING LIST\r\n");
@@ -67,14 +70,14 @@ void test_part2() {
 
 
     printf("CHANGING CLIENT STATE\r\n");
-    update_gym(gym, sharedGymObject);
+    update_gym(gym);
     Client *client = client_list_find_pid(pids[0], gym->arrivingList);
 
     client->state = WAITING;
-    update_shared_gym(sharedGymObject, gym);
+    update_shared_gym(gym);
 
     gym_del(gym);
-    clean_shared_gym(sharedGymObject);
+    close_shared_gym();
 }
 
 int main(int argc, char **argv) {

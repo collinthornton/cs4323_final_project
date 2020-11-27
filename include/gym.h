@@ -49,12 +49,12 @@ void open_gym(int numberTrainers, int numberCouches, int numberClients, int useS
 int init_shared_gym(int maxCouches);
 Gym* gym_init();
 
-Gym* update_gym(Gym *gym, SharedGym *sharedGym);
-void update_shared_gym(SharedGym* sharedGym, Gym* gym);
-SharedGym* get_shared_gym();
+Gym* update_gym(Gym *gym);
+void update_shared_gym(Gym* gym);
+void open_shared_gym();
 
 void gym_del(Gym *gym);
-void clean_shared_gym(SharedGym* sharedGym);
+void close_shared_gym();
 
 Client* copy_client(Client *dest, Client *src);
 Trainer* copy_trainer(Trainer* dest, Trainer *src);

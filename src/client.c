@@ -27,14 +27,13 @@
 
 pid_t client_start() {
     pid_t pid = fork();
-
-    printf("pid: %d\r\n", getpid());
     
     if(pid < 0) {
         perror("client_start() fork");
         return pid;
     }
     else if(pid == 0) {
+        printf("child pid: %d\r\n", getpid());
         int ret = client_proc_state_machine();
         exit(ret);
     } else {
@@ -47,9 +46,10 @@ int client_proc_state_machine() {
     int pid = getpid();
 
     Gym *gym = gym_init();
-    SharedGym *sharedGymObject = get_shared_gym();
+    open_shared_gym();
+    update_gym(gym);
 
-    if(gym == NULL || sharedGymObject == NULL) {
+    if(gym == NULL) {
         perror("client_proc_state_machine() get_shared_gym");
         return -1;
     }
@@ -67,21 +67,21 @@ int client_proc_state_machine() {
             case ARRIVING:
                 client_list_add_client(client, gym->arrivingList);
                 Workout *workout = workout_init(5, 5, 5, NULL);
-                Trainer *trainer = trainer_init(1234, client->pid, WITH_CLIENT);
+                Trainer *trainer = trainer_init(getpid()+1, client->pid, WITH_CLIENT);
                 client->workout = *workout;
                 client->current_trainer = *trainer;
                 trainer_del(trainer);
                 workout_del(workout);
 
-                update_shared_gym(sharedGymObject, gym);
+                update_shared_gym(gym);
 
                 char buffer[BUFFER_SIZE] = "\0";
-                update_gym(gym, sharedGymObject);
+                update_gym(gym);
                 client = client_list_find_pid(pid, gym->arrivingList);
                 client_list_to_string(gym->arrivingList, buffer);
                 
-                printf("\r\n\r\nchild -> %s\r\n\r\n", buffer);
-                printf("child trainer pid -> %d\r\n\r\n", sharedGymObject->arrivingList[0].current_trainer.pid);
+                printf("\r\n CHILD ARRIVING LIST (%d) \r\n%s\r\n", getpid(), buffer);
+                //printf("child trainer pid -> %d\r\n\r\n", gym->arrivingList->HEAD->node->current_trainer.pid);
                 
                 client->state = LEAVING;
                 sleep(5); 
@@ -92,7 +92,7 @@ int client_proc_state_machine() {
                 printf("PARENT CHANGED ME TO WAITING\r\n");
                 sleep(1);
                 client->state = LEAVING;
-                update_shared_gym(sharedGymObject, gym);
+                update_shared_gym(gym);
                 //Now check if there is room on the couches
 
                 // client_waiting_event(gym, client);
@@ -114,7 +114,7 @@ int client_proc_state_machine() {
                     //sleep(2*gym->unit_time);
                     //End the semaphore
                     client->state = WAITING;
-                    update_shared_gym(sharedGymObject, gym);
+                    update_shared_gym(gym);
                 break;
 
             case TRAINING:
@@ -130,20 +130,22 @@ int client_proc_state_machine() {
 
 
         // Update shared memory
-        update_gym(gym, sharedGymObject);
+        update_gym(gym);
 
         client = client_list_find_pid(pid, gym->arrivingList);
         if(client == NULL) client = client_list_find_pid(pid, gym->waitingList);
         if(client == NULL) client = client_list_find_pid(pid, gym->workoutList);
         if(client == NULL) {
             perror("client_proc_state_machine client not found");
+            gym_del(gym);
+            close_shared_gym();
             return -1;
         }
     }
 
     //client_del(client);
     gym_del(gym);
-    clean_shared_gym(sharedGymObject);
+    close_shared_gym();
     // Remove client from any lists
     // Exit cleanly
 

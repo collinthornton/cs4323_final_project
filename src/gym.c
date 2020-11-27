@@ -28,8 +28,11 @@
 // Gym functions
 //
 
+static SharedGym *sharedGym;
+
+
 int init_shared_gym(int maxCouches){
-    SharedGym *sharedGym;
+    //SharedGym *sharedGym;
 
     int sharedMemoryID;
     int *sharedMemoryAddress;
@@ -42,34 +45,16 @@ int init_shared_gym(int maxCouches){
         return 1;
     }
 
+    // TAKE THE SEMAPHORE
+    sem_wait(&shared_gym_sem);
     sharedGym = shmat(sharedMemoryID, NULL, 0);
 
     if (sharedGym == (void *) -1){
+        sem_post(&shared_gym_sem);
         printf("Could not attached to the shared memory\n");
         return 1;
     }
 
-    /*
-    for(int i=0; i<MAX_CLIENTS; ++i) {
-        sharedGym->arrivingList[i].current_couch = NULL;
-        sharedGym->arrivingList[i].current_trainer = NULL;
-        sharedGym->arrivingList[i].workout = NULL;
-        sharedGym->arrivingList[i].pid = 0;
-        sharedGym->arrivingList[i].state = ARRIVING;
-
-        sharedGym->waitingList[i].current_couch = NULL;
-        sharedGym->waitingList[i].current_trainer = NULL;
-        sharedGym->waitingList[i].workout = NULL;
-        sharedGym->waitingList[i].pid = 0;
-        sharedGym->waitingList[i].state = WAITING;
-
-        sharedGym->workoutList[i].current_couch = NULL;
-        sharedGym->workoutList[i].current_trainer = NULL;
-        sharedGym->workoutList[i].workout = NULL;
-        sharedGym->workoutList[i].pid = 0;
-        sharedGym->workoutList[i].state = TRAINING;
-    }
-    */
 
     for(int i=0; i<MAX_TRAINERS; ++i) {
         sharedGym->trainerList[i].client_pid = 0;
@@ -85,9 +70,13 @@ int init_shared_gym(int maxCouches){
     sharedGym->len_trainer = 0;
 
     if (shmdt(sharedGym) == -1){
+        sem_post(&shared_gym_sem);
         printf("Something happened trying to detach from shared memory\n");
         return 1;
     }
+ 
+    // RELEASE THE SEMAPHORE
+    sem_post(&shared_gym_sem);
  
     return 0;
 }
@@ -104,7 +93,7 @@ Gym* gym_init() {
     return gym;
 }
 
-SharedGym* get_shared_gym(){
+void open_shared_gym(){
     //First get shared object from memory
     int sharedMemoryID;
     int *sharedMemoryAddress;
@@ -114,21 +103,29 @@ SharedGym* get_shared_gym(){
     if (sharedMemoryID == -1){
         //something went wrong here
         printf("Something went wrong allocating the shared memory space\n");
-        return NULL;
+        return;
     }
 
-    SharedGym *sharedGym = shmat(sharedMemoryID, NULL, 0);
+    // TAKE THE SEMAPHORE
+    sem_wait(&shared_gym_sem);
+
+    sharedGym = shmat(sharedMemoryID, NULL, 0);
 
     if (sharedGym == (void *) -1){
+        sem_post(&shared_gym_sem);
         printf("Could not attached to the shared memory\n");
-        return NULL;
+        return;
     }    
 
-    return sharedGym;
+    // RELEASE THE SEMAPHORE
+    sem_post(&shared_gym_sem);
+    return;
 }
 
 
-void update_shared_gym(SharedGym *sharedGym, Gym *gym) {
+void update_shared_gym(Gym *gym) {
+    sem_wait(&shared_gym_sem);
+
     sharedGym->unit_time = gym->unit_time;
     sharedGym->maxCouches = gym->maxCouches;
     sharedGym->len_arriving = gym->arrivingList->len;
@@ -143,7 +140,6 @@ void update_shared_gym(SharedGym *sharedGym, Gym *gym) {
             break;
         }        
         copy_client(&sharedGym->arrivingList[i], tmp->node);
-        //sharedGym->arrivingList[i] = *tmp->node;
         tmp = tmp->next;
     }
 
@@ -154,7 +150,6 @@ void update_shared_gym(SharedGym *sharedGym, Gym *gym) {
             break;
         }        
         copy_client(&sharedGym->waitingList[i], tmp->node);
-        //sharedGym->waitingList[i] = *tmp->node;
         tmp = tmp->next;
     }
 
@@ -165,7 +160,6 @@ void update_shared_gym(SharedGym *sharedGym, Gym *gym) {
             break;
         }        
         copy_client(&sharedGym->workoutList[i], tmp->node);
-        //sharedGym->workoutList[i] = *tmp->node;
         tmp = tmp->next;
     }   
 
@@ -176,13 +170,14 @@ void update_shared_gym(SharedGym *sharedGym, Gym *gym) {
             break;
         }
         copy_trainer(&sharedGym->trainerList[i], ttmp->node);
-        //sharedGym->trainerList[i] = *ttmp->node;
         ttmp = ttmp->next;
     }
+
+    sem_post(&shared_gym_sem);
 }
 
 
-Gym* update_gym(Gym *gym, SharedGym *sharedGym)  {
+Gym* update_gym(Gym *gym)  {
     // Easiest to just delete everything and start from scratch
     client_list_del_clients(gym->arrivingList);
     client_list_del_clients(gym->waitingList);
@@ -198,6 +193,9 @@ Gym* update_gym(Gym *gym, SharedGym *sharedGym)  {
     gym->waitingList = client_list_init();
     gym->workoutList = client_list_init();
     gym->trainerList = trainer_list_init();
+
+
+    sem_wait(&shared_gym_sem);
 
     gym->maxCouches = sharedGym->maxCouches;
     gym->unit_time = sharedGym->unit_time;
@@ -222,6 +220,8 @@ Gym* update_gym(Gym *gym, SharedGym *sharedGym)  {
         copy_trainer(trainer, &sharedGym->trainerList[i]);
         trainer_list_add_trainer(trainer, gym->trainerList);  
     }  
+
+    sem_post(&shared_gym_sem);
 }
 
 
@@ -238,18 +238,24 @@ void gym_del(Gym *gym) {
     free(gym);
 }
 
-void clean_shared_gym(SharedGym* sharedGym){
+void close_shared_gym(){
     int sharedMemoryID = shmget(SHARED_KEY, sizeof(SharedGym), IPC_CREAT|0644);
     
+    sem_wait(&shared_gym_sem);
     if (shmdt(sharedGym) == -1){
         printf("Something happened trying to detach from shared memory\n");
+        sem_post(&shared_gym_sem);
         return;
     }      
 
     if (shmctl(sharedMemoryID,IPC_RMID,0) == -1){
-        printf("Something went wrong with the shmctl function\n");
+        // It's already been closed by another process. Just ignore.
+        //printf("Something went wrong with the shmctl function\n");
+        sem_post(&shared_gym_sem);
         return;
     }    
+
+    sem_post(&shared_gym_sem);
 }
 
 
@@ -260,18 +266,6 @@ Client* copy_client(Client *dest, Client *src) {
     }
 
     *dest = *src;
-    //if(src->current_trainer != NULL) {
-    //dest->current_trainer = src->current_trainer;
-    //}
-    
-    //if(src->current_couch != NULL)
-    //    *dest->current_couch = *src->current_couch;
-    //else
-    //    dest->current_couch = NULL;
-    
-    //if(src->workout != NULL)
-    //    *dest->workout = *src->workout;
-
     return dest;
 }
 
@@ -282,11 +276,5 @@ Trainer* copy_trainer(Trainer *dest, Trainer *src) {
     }
 
     *dest = *src;
-
-    /*
-    if(src->current_client != NULL)
-        *dest->current_client = *src->current_client;
-    */
-
     return dest;
 }
