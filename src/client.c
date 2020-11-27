@@ -13,6 +13,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <semaphore.h>
 
 #include "client.h"
 #include "gym.h"
@@ -65,21 +66,36 @@ int client_proc_state_machine() {
         switch(client->state) {
             case ARRIVING:
                 client_list_add_client(client, gym->arrivingList);
+                Workout *workout = workout_init(5, 5, 5, NULL);
+                Trainer *trainer = trainer_init(1234, client->pid, WITH_CLIENT);
+                client->workout = *workout;
+                client->current_trainer = *trainer;
+                trainer_del(trainer);
+                workout_del(workout);
+
                 update_shared_gym(sharedGymObject, gym);
 
                 char buffer[BUFFER_SIZE] = "\0";
+                update_gym(gym, sharedGymObject);
+                client = client_list_find_pid(pid, gym->arrivingList);
                 client_list_to_string(gym->arrivingList, buffer);
                 
-                //update_gym(gym, sharedGymObject);
-                //printf("\r\n\r\nchild -> %s\r\n\r\n", buffer);
+                printf("\r\n\r\nchild -> %s\r\n\r\n", buffer);
+                printf("child trainer pid -> %d\r\n\r\n", sharedGymObject->arrivingList[0].current_trainer.pid);
                 
-                
+                client->state = LEAVING;
                 sleep(5); 
-                client_arriving_event(gym, client);               
+                //client_arriving_event(gym, client);               
                 break;
 
             case WAITING:
+                printf("PARENT CHANGED ME TO WAITING\r\n");
+                sleep(1);
+                client->state = LEAVING;
+                update_shared_gym(sharedGymObject, gym);
                 //Now check if there is room on the couches
+
+                // client_waiting_event(gym, client);
                 
                 /*if(gym->waitingList->len < gym->maxCouches){
                     //Another semaphore areas
@@ -98,6 +114,7 @@ int client_proc_state_machine() {
                     //sleep(2*gym->unit_time);
                     //End the semaphore
                     client->state = WAITING;
+                    update_shared_gym(sharedGymObject, gym);
                 break;
 
             case TRAINING:
@@ -111,10 +128,20 @@ int client_proc_state_machine() {
                 break;
         }
 
-        // update shared memory
+
+        // Update shared memory
+        update_gym(gym, sharedGymObject);
+
+        client = client_list_find_pid(pid, gym->arrivingList);
+        if(client == NULL) client = client_list_find_pid(pid, gym->waitingList);
+        if(client == NULL) client = client_list_find_pid(pid, gym->workoutList);
+        if(client == NULL) {
+            perror("client_proc_state_machine client not found");
+            return -1;
+        }
     }
 
-    free(client);
+    //client_del(client);
     gym_del(gym);
     clean_shared_gym(sharedGymObject);
     // Remove client from any lists
@@ -144,13 +171,36 @@ Client* client_init(pid_t pid, ClientState state, Trainer* trainer, Couch* couch
 
     client->pid = pid;
     client->state = state;
-    client->current_trainer = trainer;
-    client->current_couch = couch;
-    client->workout = workout;
+    
+    if(trainer != NULL)
+        client->current_trainer = *trainer;
+    
+    else
+    {
+        Trainer *tmp = trainer_init(-1, -1, FREE);
+        client->current_trainer = *tmp;
+        trainer_del(tmp);
+    }
+    
+    if(couch != NULL)
+        client->current_couch = *couch;
+    
+    if(workout != NULL)
+        client->workout = *workout;
+    
+    else
+    {
+        Workout *tmp = workout_init(-1, -1 -1, -1, NULL);
+        client->workout = *tmp;
+        workout_del(tmp);
+    }
+    
     return client;
 }
 
 int client_del(Client* client) {   
+    if(client == NULL) return -1;
+
     free(client);
     return 0;
 }
@@ -160,9 +210,18 @@ const char* client_to_string(Client *client, char buffer[]) {
 
     sprintf(buffer, "pid: %d", client->pid);
     sprintf(buffer + strlen(buffer), "   state: %d", client->state);
-    //sprintf(buffer + strlen(buffer), "   trainer: %ld", client->current_trainer);
-    //sprintf(buffer + strlen(buffer), "   couch: %ld", client->current_couch);
-    //sprintf(buffer + strlen(buffer), "   workout: %ld", client->workout);
+
+    //if(client->current_trainer != NULL)
+        sprintf(buffer + strlen(buffer), "   trainer: %d", client->current_trainer.pid);
+
+    //if(client->current_couch != NULL) {
+        int sem_val;
+        sprintf(buffer + strlen(buffer), "   couch: %d", sem_getvalue(&client->current_couch.couch_mutex, &sem_val));
+    //}
+
+    //if(client->workout != NULL)
+        sprintf(buffer + strlen(buffer), "   workout: %d", client->workout.total_weight);
+
     return buffer;
 }
 
@@ -187,6 +246,18 @@ ClientList* client_list_init() {
     list->TAIL = NULL;
     list->len = 0;
     return list;
+}
+
+int client_list_del_clients(ClientList *list) {
+    if(list == NULL) return 0;
+
+    ClientNode *tmp = list->HEAD;
+
+    while(tmp != NULL) {
+        client_del(tmp->node);
+        tmp = tmp->next;
+    }
+    return 0;
 }
 
 int client_list_del(ClientList *list) {
@@ -305,7 +376,16 @@ ClientNode* client_list_srch(Client *client, ClientList *list) {
     return NULL;
 }
 
+Client* client_list_find_pid(pid_t pid, ClientList *list) {
+    if(list == NULL) return NULL;
 
+    ClientNode *tmp = list->HEAD;
+    while(tmp != NULL) {
+        if(tmp->node->pid = pid) return tmp->node;
+        tmp = tmp->next;
+    }
+    return NULL;
+}
 
 
 

@@ -12,6 +12,7 @@
 #define CLIENT_H
 
 #include "client_trainer.h"
+#include "trainer.h"
 #include "workout.h"
 #include "gym_resources.h"
 
@@ -29,9 +30,9 @@ struct Client {
     pid_t pid;
     ClientState state;
 
-    Trainer* current_trainer;   
-    Couch* current_couch;       //TODO Should this just be a semaphore?
-    Workout* workout;           // Set by trainer
+    Trainer current_trainer;   
+    Couch current_couch;       //TODO Should this just be a semaphore?
+    Workout workout;           // Set by trainer
 };
 
 typedef struct ClientNode {
@@ -62,12 +63,14 @@ const char* client_to_string(Client *client, char buffer[]);
 
 ClientList* client_list_init();
 int client_list_del(ClientList *list);
+int client_list_del_clients(ClientList *list);
 int client_list_add_client(Client *client, ClientList* list);
 int client_list_rem_client(Client *client, ClientList *list);
 
 const char* client_list_to_string(ClientList *list, char buffer[]);
 
 ClientNode* client_list_srch(Client *client, ClientList *list);
+Client* client_list_find_pid(pid_t pid, ClientList *list);
 
 
 void test_client_list();

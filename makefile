@@ -8,10 +8,10 @@ CFLAGS=-I$(INCLUDE_DIR) -g
 _DEPS = client_trainer.h client.h deadlock.h entrance.h gym_resources.h gym.h resource_manager.h trainer.h vector.h waiting_room.h workout_room.h workout.h
 DEPS = $(patsubset %,$(INCLUDE_DIR)/%,$(_DEPS))
 
-_OBJ = client.o deadlock.o entrance.o gym_resources.o gym.o resource_manager.o trainer.o vector.o waiting_room.o workout_room.o
+_OBJ = client.o deadlock.o entrance.o gym_resources.o gym.o resource_manager.o trainer.o vector.o waiting_room.o workout_room.o workout.o
 OBJ = $(patsubst %,$(BUILD_DIR)/%,$(_OBJ))
 
-LIBS = -lrt
+LIBS = -lrt -pthread
 
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c $(DEPS)
@@ -19,7 +19,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c $(DEPS)
 
 
 
-part2: $(BUILD_DIR)/part2.o $(OBJ)
+part2: $(BUILD_DIR)/part2.o $(INCLUDE_DIR)/part2.h $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 part1: $(BUILD_DIR)/part1.o $(OBJ)
