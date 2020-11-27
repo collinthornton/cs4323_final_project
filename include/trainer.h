@@ -1,44 +1,73 @@
-#include "client.h"
+// ##########################################
+// 
+//   Author  -   Collin Thornton
+//   Email   -   collin.thornton@okstate.edu
+//   Brief   -   Final Project Trainer include
+//   Date    -   11-15-20
+//
+// ########################################## 
+
+#ifndef TRAINER_H
+#define TRAINER_H
+
+#include <stdlib.h>
+#include <sys/wait.h>
+
+#define MAX_TRAINERS 4
 
 typedef enum {
     FREE,
     ON_PHONE,
-    WITH_CLIENT,
-    TRAVELLING
+    TRAVELLING,
+    WITH_CLIENT
 } TrainerState;
 
-typedef struct {
-    int pID;
+typedef struct Trainer {
+    pid_t pid;
+    pid_t client_pid;
     TrainerState state;
-    Client* current_client;
 } Trainer;
 
-typedef struct {
+typedef struct TrainerNode {
     Trainer* node;
-    Trainer* prev;
-    Trainer* next;
+    struct TrainerNode* prev;
+    struct TrainerNode* next;
 } TrainerNode;
 
 typedef struct {
-    TrainerNode* HEAD, TAIL;
-    TrainerNode* node;
+    TrainerNode *HEAD, *TAIL;
 
-    int size;
-    int allocated;
+    int len;
 } TrainerList;
 
-Trainer* trainer_init(TrainerState state, Client* client, int pID);
 
-TrainerList* trainer_init_list();
-int trainer_add_to_list(Trainer *trainer, TrainerList* list);
-int trainer_rem_from_list(Trainer *trainer, TrainerList *list);
+// EACH CLIENT SHOULD BE ON A DIFFERENT PROCESS
+// - should maintain a finite state machine
 
-int trainer_del_list(TrainerList *list);
-int trainer_del_trainer(Trainer *trainer);
 
-void trainer_start();
 
-Trainer* find_trainer_with_client(Client* clientToFind, TrainerList* trainerList);
 
-Trainer* find_available_trainer(TrainerList* trainerList);
-Trainer* find_trainer_on_phone(TrainerList* trainerList);
+// Allocate trainer on heap. Init params as NULL if unavailable
+Trainer* trainer_init(pid_t pid, pid_t client_pid, TrainerState state);
+int trainer_del(Trainer* trainer);
+const char* trainer_to_string(Trainer *trainer, char buffer[]);
+
+
+TrainerList* trainer_list_init();
+int trainer_list_del(TrainerList *list);
+int trainer_list_del_trainers(TrainerList *list);
+int trainer_list_add_trainer(Trainer *trainer, TrainerList* list);
+int trainer_list_rem_trainer(Trainer *trainer, TrainerList *list);
+
+Trainer* trainer_list_find_client(pid_t client_pid, TrainerList *list);
+Trainer* trainer_list_find_available(TrainerList *list);
+Trainer* trainer_list_find_phone(TrainerList *list);
+
+const char* trainer_list_to_string(TrainerList *list, char buffer[]);
+
+TrainerNode* trainer_list_srch(Trainer *trainer, TrainerList *list);
+
+
+void test_trainer_list(void);
+
+#endif // TRAINER_H

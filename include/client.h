@@ -1,31 +1,78 @@
+// ##########################################
+// 
+//   Author  -   Collin Thornton
+//   Email   -   collin.thornton@okstate.edu
+//   Brief   -   Final Project Client include
+//   Date    -   11-15-20
+//
+// ########################################## 
 
-typedef enum {ARRIVING, WAITING, TRAINING, TRAVELING, LEAVING} ClientState;
 
-typedef struct {
-    int pID;
+#ifndef CLIENT_H
+#define CLIENT_H
+
+#include "client_trainer.h"
+#include "trainer.h"
+#include "workout.h"
+#include "gym_resources.h"
+
+#define MAX_CLIENTS 6
+
+typedef enum {
+    ARRIVING,
+    WAITING,
+    MOVING,
+    TRAINING,
+    LEAVING
+} ClientState;
+
+struct Client {
+    pid_t pid;
     ClientState state;
-} Client;
 
-typedef struct {
+    Trainer current_trainer;   
+    Couch current_couch;       //TODO Should this just be a semaphore?
+    Workout workout;           // Set by trainer
+};
+
+typedef struct ClientNode {
     Client* node;
-    Client* prev;
-    Client* next;
+    struct ClientNode* prev;
+    struct ClientNode* next;
 } ClientNode;
 
 typedef struct {
-    ClientNode* HEAD, TAIL;
-    ClientNode* node;
+    ClientNode *HEAD, *TAIL;
 
-    int size;
-    int allocated;
+    int len;
 } ClientList;
 
-// Allocate client on heap. Init params as NULL if unavailable
-Client* client_init(ClientState state, int pID);
 
-ClientList* client_init_list();
-int client_add_to_list(Client *client, ClientList* list);
-int client_rem_from_list(Client *client, ClientList *list);
+// EACH CLIENT SHOULD BE ON A DIFFERENT THREAD
+// - should maintain a finite state machine
+pid_t client_start();
+int client_proc_state_machine();
 
-int client_del_list(ClientList *list);
-int client_del_client(Client *client);
+
+
+// Allocate client struct on heap. Init params as NULL if unavailable
+Client* client_init(pid_t pid, ClientState state, Trainer* trainer, Couch *couch, Workout *workout);
+int client_del(Client* client);
+const char* client_to_string(Client *client, char buffer[]);
+
+
+ClientList* client_list_init();
+int client_list_del(ClientList *list);
+int client_list_del_clients(ClientList *list);
+int client_list_add_client(Client *client, ClientList* list);
+int client_list_rem_client(Client *client, ClientList *list);
+
+const char* client_list_to_string(ClientList *list, char buffer[]);
+
+ClientNode* client_list_srch(Client *client, ClientList *list);
+Client* client_list_find_pid(pid_t pid, ClientList *list);
+
+
+void test_client_list();
+
+#endif // CLIENT_H

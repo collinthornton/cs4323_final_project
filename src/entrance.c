@@ -21,11 +21,9 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include "client.h"
-#include "trainer.h"
 #include "entrance.h"
 
-
+/*
 void open_gym(int numberTrainers, int numberCouches, int numberClients, int useSemaphors){
     //First, established the shared memory object
     init_shared_gym(numberCouches);
@@ -65,15 +63,15 @@ void open_gym(int numberTrainers, int numberCouches, int numberClients, int useS
         }
 
         //First get the trainer list built out
-        if (sharedGymObject->trainerList->size < numberTrainers){
+        if (sharedGymObject->trainerList->len < numberTrainers){
             //Add this process to the trainer list
-            Trainer *newTrainer = trainer_init(FREE, NULL, childProcessID);
-            sharedGymObject->trainerList = trainer_add_to_list(newTrainer, sharedGymObject->trainerList);
+            Trainer *newTrainer = trainer_init(childProcessID, FREE, NULL);
+            trainer_list_add_trainer(newTrainer, sharedGymObject->trainerList);
         } else {
             //Second, start having clients "arrive" and get assigned to trainers
 
             //Make this process an arriving client
-            Client *newClient = client_init(ARRIVING, childProcessID);
+            Client *newClient = client_init(childProcessID, ARRIVING, NULL, NULL, NULL);
             client_arriving_event(sharedGymObject, newClient);
 
             if(newClient->state == LEAVING){
@@ -164,23 +162,33 @@ void client_arriving_event(Gym* sharedGym, Client* newClient){
 
     //Next, check to see if a trainer grabbed the client
     if (find_trainer_with_client(newClient, sharedGym->trainerList) != NULL){
+*/
+void client_arriving_event(Gym* sharedGym, Client* newClient){
+    //First add it to the arriving LL 
+    client_list_add_client(newClient, sharedGym->arrivingList);
+
+    //Next, check to see if a trainer grabbed the client
+    if (trainer_list_find_client(newClient->pid, sharedGym->trainerList) != NULL){
         //We are done here.
         return;
     }
 
     //Next see if there are any trainers on their phones
-    Trainer* trainer = find_trainer_on_phone(sharedGym->trainerList);
+    Trainer* trainer = trainer_list_find_phone(sharedGym->trainerList);
     if (trainer != NULL){
-        client_rem_from_list(newClient, sharedGym->arrivingList);
+        client_list_rem_client(newClient, sharedGym->arrivingList);
 
         newClient->state = TRAINING;
-        trainer->current_client = newClient;
+        trainer->client_pid = newClient->pid;
         trainer->state = WITH_CLIENT;
         
         return;
     }
 
     //Time to go to the waiting room
+
+    /*----------------Original Code, before merge------------------
+
     client_rem_from_list(newClient, sharedGym->arrivingList);
     newClient->state = TRAVELING;
     
@@ -201,4 +209,8 @@ void client_arriving_event(Gym* sharedGym, Client* newClient){
     }
 }
 
-
+    --------------------------------------------------------------*/
+    
+    client_list_rem_client(newClient, sharedGym->arrivingList);
+    newClient->state = MOVING;
+}

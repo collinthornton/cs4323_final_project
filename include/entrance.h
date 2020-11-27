@@ -1,18 +1,27 @@
+/*-------------------------------------------------------------
+
+    Author  -   Robert Cook
+    Email   -   robert.cook@okstate.edu
+    Date    -   11-24-2020
+    Description
+        This file represents the "entrance" of the gym
+        This will be what handles all of the client arrivals
+        and can be thought of as the front doors of the gym
+
+-------------------------------------------------------------*/
+
+
+#ifndef ENTRANCE_H
+#define ENTRANCE_H
+
+
 #include "client.h"
 #include "trainer.h"
+#include "gym.h"
 
-#define SHARED_KEY 0x1234
-#define BUFFER_SIZE 1024
 
 void open_gym(int numberTrainers, int numberCouches, int numberClients, int useSemaphors);
-int init_shared_gym(int maxCouches);
-Gym* get_shared_gym();
-void clean_shared_gym(Gym* sharedGym);
+void client_arriving_event(Gym* sharedGym, Client* newClient);
 
-struct Gym {
-    ClientList* waitingList;
-    ClientList* arrivingList;
-    TrainerList* trainerList;
-    int maxCouches;
-} typedef Gym;
 
+#endif // ENTRANCE_H
