@@ -34,7 +34,13 @@ int client_workout_event(Gym *gym, Client *client) {
         return -1;
     }
 
-    // MAKE SURE WE ADD OURSELVES TO THE CORRECT LIST
+    Trainer *trainer = trainer_list_find_pid(client->current_trainer.pid, gym->trainerList);
+    if(trainer == NULL) {
+        perror("client_workout_event() trainer not in list");
+        return -1;
+    }
+
+    // MAKE SURE WE'VE ADDED OURSELF TO THE CORRECT LIST
     client_list_rem_client(client, gym->arrivingList);
     client_list_rem_client(client, gym->waitingList);
     client_list_add_client(client, gym->workoutList);
@@ -43,7 +49,7 @@ int client_workout_event(Gym *gym, Client *client) {
 
     // WAIT FOR THE TRAINER TO SEND US A WORKOUT. MAX 10 SECONDS
     int num_wait = 0;
-    while(client->workout.total_weight <= 0 || num_wait == MAX_WAIT_ITER) {
+    while(trainer->workout.total_weight <= 0 || num_wait == MAX_WAIT_ITER) {
         printf("client %d waiting for workout\r\n", getpid());
         sleep(1);
 
@@ -58,6 +64,9 @@ int client_workout_event(Gym *gym, Client *client) {
         return -1;
     }
 
+    // TRAINER SENT WORKOUT. COPY TO CLIENT
+    client->workout = trainer->workout;
+    update_shared_gym(gym);
 
     // FIGURE OUT HOW MANY PLATES WE NEED WHILE UTILIZING THE SMALLEST NUMBER
     int weight_left = client->workout.total_weight;
@@ -105,6 +114,7 @@ int client_workout_event(Gym *gym, Client *client) {
     }
 
     client->workout.in_use = allocation;
+    update_shared_gym(gym);
     
 
     // RUN THROUGH SETS
@@ -112,9 +122,18 @@ int client_workout_event(Gym *gym, Client *client) {
     
     //! SHOULD BE IN A DIFFERENT FUNCTION FOR ROLLBACK
     for(int i=0; i<client->workout.total_sets; ++i) {
+        printf("client %d performing set %d of %d\r\n", getpid(), i+1, client->workout.total_sets);
         sleep(2);
         --client->workout.sets_left;
+        update_shared_gym(gym);
     }
+
+
+    // REPLACE WEIGHTS
+    releaseWeightAllocation(getpid(), &client->workout.in_use);
+    Workout *tmp = workout_init(client->workout.total_sets, client->workout.sets_left, client->workout.total_weight, NULL);
+    client->workout = *tmp;
+    workout_del(tmp);
 
     //Weight* weights = client_get_weights();
     //workout->in_use = weights;
@@ -157,7 +176,7 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
     int sets_left = total_sets;
 
     Workout *workout = workout_init(total_sets, sets_left, total_weight, NULL);    
-    client->workout = *workout;
+    trainer->workout = *workout;
     workout_del(workout);
 
     update_shared_gym(gym);

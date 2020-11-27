@@ -29,8 +29,6 @@ typedef struct {
     Client workoutList[MAX_CLIENTS];
     Trainer trainerList[MAX_TRAINERS];
 
-    int len_waiting, len_arriving, len_workout, len_trainer;
-
     int maxCouches;
     int unit_time; // seconds
 } SharedGym;

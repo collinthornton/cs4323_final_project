@@ -18,7 +18,7 @@
 #include "workout_room.h"
 #include "deadlock.h"
 
-#define NUM_CLIENTS MAX_CLIENTS
+#define NUM_CLIENTS 3 //MAX_CLIENTS
 
 #define NUM_COUCHES 3
 
@@ -42,8 +42,14 @@ void test_part2() {
     printf("parent pid: %d\r\n", getpid());
     for(int i=0; i<NUM_CLIENTS; ++i) pids[i] = client_start();
 
+    Trainer *trainer = trainer_init(getpid(), pids[0], FREE);
+    
     Gym *gym = gym_init();
+    trainer_list_add_trainer(trainer, gym->trainerList);
+
     open_shared_gym();
+
+    update_shared_gym(gym);
     update_gym(gym);
     printf("%d\r\n", gym->unit_time);
 
@@ -67,13 +73,17 @@ void test_part2() {
     printf("%s\r\n", buffer);
 
 
-    printf("CHANGING CLIENT STATE\r\n");
-    update_gym(gym);
-    Client *client = client_list_find_pid(pids[0], gym->arrivingList);
+    //! NO LONGER ALLOWED
+    //printf("CHANGING CLIENT STATE\r\n");
+    //update_gym(gym);
+    //Client *client = client_list_find_pid(pids[0], gym->arrivingList);
 
-    client->state = WAITING;
-    update_shared_gym(gym);
+    //client->state = WAITING;
+    //update_shared_gym(gym);
 
+    //client_del(client);
+
+    trainer_del(trainer);
     gym_del(gym);
     close_shared_gym();
 }

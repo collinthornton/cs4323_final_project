@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 
+#include "workout.h"
+
 #define MAX_TRAINERS 4
 
 typedef enum {
@@ -26,6 +28,7 @@ typedef struct Trainer {
     pid_t pid;
     pid_t client_pid;
     TrainerState state;
+    Workout workout;
 } Trainer;
 
 typedef struct TrainerNode {
@@ -43,7 +46,8 @@ typedef struct {
 
 // EACH CLIENT SHOULD BE ON A DIFFERENT PROCESS
 // - should maintain a finite state machine
-
+pid_t trainer_start();
+int trainer_proc_state_machine();
 
 
 

@@ -25,7 +25,14 @@ Workout* workout_init(int total_sets, int sets_left, int total_weight, Weight *w
     workout->total_weight = total_sets;
     workout->sets_left = sets_left;
     workout->total_weight = total_weight;
-    workout->in_use = *weight;
+    if(weight != NULL) {
+        workout->in_use = *weight;
+    }
+    else {
+        Weight *tmp_weight = weight_init(NULL);
+        workout->in_use = *tmp_weight;
+        weight_del(tmp_weight);
+    }
 
     return workout;
 }

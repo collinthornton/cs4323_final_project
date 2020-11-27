@@ -11,6 +11,46 @@
 #include <string.h>
 
 #include "trainer.h"
+#include "gym.h"
+
+//////////////////////////////
+//
+// Trainer process functions
+//
+
+pid_t trainer_start() {
+    pid_t pid = fork();
+
+    if(pid < 0) {
+        perror("trainer_start() fork");
+        return pid;
+    }
+    else if(pid == 0) {
+        printf("new trainer pid: %d\r\n", getpid());
+        int ret = trainer_proc_state_machine();
+        exit(ret);
+    }
+    else {
+        return pid;
+    }
+}
+
+
+int trainer_proc_state_machine() {
+
+    int pid = getpid();
+
+    Gym *gym = gym_init();
+}
+
+
+
+
+
+
+
+
+
 
 
 Trainer* trainer_init(pid_t pid, pid_t client_pid, TrainerState state) {
@@ -24,6 +64,11 @@ Trainer* trainer_init(pid_t pid, pid_t client_pid, TrainerState state) {
     trainer->pid = pid;
     trainer->state = state;
     trainer->client_pid = client_pid;
+    
+    Workout *tmp = workout_init(-1, -1, -1, NULL);
+    trainer->workout = *tmp;
+    workout_del(tmp);
+
     return trainer;
 }
 

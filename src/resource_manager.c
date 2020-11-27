@@ -490,7 +490,7 @@ static int writeWeightMatrixToFile(WeightMatrix *matrix, int section) {
 
 
 
-int removeWeightAllocation(pid_t pid, Weight *weight) {
+int releaseWeightAllocation(pid_t pid, Weight *weight) {
     WeightMatrix *matrix = getWeightAllocation();
 
     WeightMatrixRow *row = weight_matrix_search(pid, matrix, NULL);
@@ -605,7 +605,7 @@ void test_resource_manager(void) {
     // TEST removeWeightRequest (section 3 of input file). Deletes weight
     pid_t request_pid = pid;
     weight = weight_init(weights);
-    removeWeightAllocation(request_pid, weight);
+    releaseWeightAllocation(request_pid, weight);
     weight_del(weight);
 
     weight = getAvailableWeights();
