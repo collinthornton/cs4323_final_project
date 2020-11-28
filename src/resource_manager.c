@@ -52,6 +52,15 @@ int weight_matrix_del(WeightMatrix* matrix) {
 }
 
 static int weight_matrix_add_req(pid_t pid, Weight* weight, WeightMatrix *matrix) {
+    if(matrix == NULL) {
+        perror("weight_matrix_add_req invalid_argument matrix");
+        return -1;
+    }
+    if(weight == NULL) {
+        perror("weight_matrix_add_req invalid_argument weight");
+        return -1;
+    }
+
     WeightMatrixRow* row = weight_matrix_search(pid, matrix, NULL);
 
     if(row == NULL) {
@@ -330,6 +339,7 @@ static WeightMatrix* getWeightMatrixFromFile(unsigned int section) {
             int num_plates = 0;
             float total_weight;
 
+            errno = 0;
             if((num_plates = strtol(tmp, &end, 10)) == 0 && errno != 0) {
                 perror("getWeightMatrixFromFile num_plates");
                 weight_del(weight);
@@ -523,6 +533,9 @@ int clearWeightFile() {
     int ret1 = writeWeightMatrixToFile(matrix, 1);
     int ret2 = writeWeightMatrixToFile(matrix, 2);
     weight_matrix_del(matrix);
+
+    remove(TMP_FILENAME);
+
     if(ret2 < 0) return ret2;
     return ret1;
 }

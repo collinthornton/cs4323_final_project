@@ -26,6 +26,7 @@
 
 void start_part2(){
     if(init_shared_gym(NUM_COUCHES) == 1) exit(1);
+    clearWeightFile();
 
 
     printf("parent -> pid %d\r\n", getpid());
@@ -70,6 +71,9 @@ void start_part2(){
     for(int i=0; i<NUM_TRAINERS; ++i) waitpid(trainer_pids[i], NULL, 0);
 
     //test_part2();
+
+    gym_del(gym);
+    close_shared_gym();
     destroy_shared_gym();
 }
 

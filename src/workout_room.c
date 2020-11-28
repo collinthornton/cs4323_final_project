@@ -69,6 +69,8 @@ int client_workout_event(Gym *gym, Client *client) {
     client->workout = trainer->workout;
     update_shared_gym(gym);
 
+    printf("client %d got workout. total weight: %d\r\n", getpid(), client->workout.total_weight);
+
     // FIGURE OUT HOW MANY PLATES WE NEED WHILE UTILIZING THE SMALLEST NUMBER
     int weight_left = client->workout.total_weight;
 
@@ -106,6 +108,11 @@ int client_workout_event(Gym *gym, Client *client) {
 
     Weight *request = weight_init(weights);
     Weight allocation = *request;
+
+    char buffer[BUFFER_SIZE] = "\0";
+    weight_to_string(request, buffer);
+    printf("client %d weight request\r\n%s\r\n", getpid(), buffer);
+
     writeWeightRequest(getpid(), request);
 
 
@@ -128,6 +135,8 @@ int client_workout_event(Gym *gym, Client *client) {
         --client->workout.sets_left;
         update_shared_gym(gym);
     }
+
+    printf("client %d finished workout\r\n", getpid());
 
 
     // REPLACE WEIGHTS
@@ -178,12 +187,12 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
     int total_sets = rand() % 5;
     int sets_left = total_sets;
 
-    Workout *workout = workout_init(total_sets, sets_left, total_weight, NULL);    
-    trainer->workout = *workout;
-    workout_del(workout);
-
+    trainer->workout.sets_left = sets_left;
+    trainer->workout.total_sets = total_sets;
+    trainer->workout.total_weight = total_weight;
     update_shared_gym(gym);
 
+    printf("trainer %d picked workout for client %d: total_weight %d, num_sets %d\r\n", getpid(), trainer->client_pid, trainer->workout.total_weight, trainer->workout.total_sets);
 
 
     // NOW WAIT FOR CLIENT TO LEAVE THE WORKOUT. TIMEOUT AFTER 10 SECONDS
@@ -204,6 +213,8 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
         perror("trainer_workout_event timeout waiting for client");
         return -1;
     }
+
+    printf("trainer %d client finished workout out\r\n", getpid());
 
     // FINISHED OUR JOB
     return 0;
