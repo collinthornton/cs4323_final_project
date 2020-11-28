@@ -46,14 +46,15 @@ int client_workout_event(Gym *gym, Client *client) {
     client_list_add_client(client, gym->workoutList);
     update_shared_gym(gym);
 
-
+    
     // WAIT FOR THE TRAINER TO SEND US A WORKOUT. MAX 10 SECONDS
     int num_wait = 0;
-    while(trainer->workout.total_weight <= 0 || num_wait == MAX_WAIT_ITER) {
+    while(trainer->workout.total_weight <= 0 && num_wait < MAX_WAIT_ITER) {
         printf("client %d waiting for workout\r\n", getpid());
-        sleep(1);
+        sleep(1*gym->unit_time);
 
         update_gym(gym);
+        trainer = trainer_list_find_pid(client->current_trainer.pid, gym->trainerList);
         client = client_list_find_pid(getpid(), gym->workoutList);
 
         ++num_wait;
@@ -110,7 +111,7 @@ int client_workout_event(Gym *gym, Client *client) {
 
     //! THIS IS WHERE WE MIGHT DEADLOCK
     while(grantWeightRequest(getpid()) < 0) {
-        sleep(1);
+        sleep(1*gym->unit_time);
     }
 
     client->workout.in_use = allocation;
@@ -123,7 +124,7 @@ int client_workout_event(Gym *gym, Client *client) {
     //! SHOULD BE IN A DIFFERENT FUNCTION FOR ROLLBACK
     for(int i=0; i<client->workout.total_sets; ++i) {
         printf("client %d performing set %d of %d\r\n", getpid(), i+1, client->workout.total_sets);
-        sleep(2);
+        sleep(2*gym->unit_time);
         --client->workout.sets_left;
         update_shared_gym(gym);
     }
@@ -158,6 +159,8 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
         return -1;
     }
 
+    update_gym(gym);
+
     Client *client = client_list_find_pid(trainer->client_pid, gym->workoutList);
     if(client == NULL) {
         perror("trainer_workout_event client not found");
@@ -187,10 +190,10 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
     // TODO make a way to cancel this
 
     int num_iter = 0;
-    while(client != NULL || num_iter == MAX_WAIT_ITER) {
+    while(client != NULL && num_iter < MAX_WAIT_ITER) {
         printf("Trainer %d waiting for client to finish workout\r\n", getpid());
 
-        sleep(1);
+        sleep(1*gym->unit_time);
         update_gym(gym);
         trainer = trainer_list_find_pid(getpid(), gym->trainerList);
         client = client_list_find_pid(trainer->client_pid, gym->workoutList);

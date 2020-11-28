@@ -56,7 +56,7 @@ int client_proc_state_machine() {
     }
 
 
-    Client *client = client_init(pid, ARRIVING, NULL, NULL, NULL);
+    Client *client = client_init(getpid(), WAITING, NULL, NULL, NULL);
     Trainer *trainer;
 
     char buffer[BUFFER_SIZE] = "\0";
@@ -70,15 +70,7 @@ int client_proc_state_machine() {
         switch(client->state) {
             case ARRIVING:
                 client_list_add_client(client, gym->arrivingList);
-               // Workout *workout = workout_init(5, 5, 5, NULL);
-               // trainer = trainer_init(getpid()+1, client->pid, WITH_CLIENT);
-               // client->workout = *workout;
-               // client->current_trainer = *trainer;
-               // trainer_del(trainer);
-               // workout_del(workout);
-
                 update_shared_gym(gym);
-                update_gym(gym);
 
                 //client = client_list_find_pid(pid, gym->arrivingList);
                 client_list_to_string(gym->arrivingList, buffer);
@@ -86,15 +78,33 @@ int client_proc_state_machine() {
                 printf("\r\n CHILD ARRIVING LIST (%d) \r\n%s\r\n", getpid(), buffer);
                 printf("child trainer pid -> %d\r\n\r\n", gym->arrivingList->HEAD->node->current_trainer.pid);
                 
-                client->state = LEAVING;
-                sleep(5); 
+
+                client_list_rem_client(client, gym->arrivingList);
+                client->state = WAITING;
+                //sleep(5*gym->unit_time); 
                 //client_arriving_event(gym, client);               
                 break;
 
             case WAITING:
-                printf("PARENT CHANGED ME TO WAITING\r\n");
-                sleep(1);
-                client->state = LEAVING;
+                client_list_add_client(client, gym->waitingList);
+                update_shared_gym(gym);
+
+                printf("client %d WAITING\r\n", getpid());
+                
+                // Check if a trainer has picked us up
+                trainer = trainer_list_find_client(getpid(), gym->trainerList);
+                if(trainer != NULL) {
+                    client->state = TRAINING;
+                    client_list_rem_client(client, gym->waitingList);
+                    copy_trainer(&client->current_trainer, trainer);
+                }
+
+                trainer_list_to_string(gym->trainerList, buffer);
+                printf("client %d -> trainer list\r\n%s\r\n", getpid(), buffer);
+
+                sleep(1*gym->unit_time);
+
+                //client->state = LEAVING;
                 //update_shared_gym(gym);
                 //Now check if there is room on the couches
 
@@ -121,7 +131,12 @@ int client_proc_state_machine() {
                 break;
 
             case TRAINING:
+                client_list_add_client(client, gym->workoutList);
+                update_shared_gym(gym);
+
+                printf("client %d TRAINING\r\n", pid);
                 client_workout_event(gym, client);
+                client->state = LEAVING;
 
                 break;
 
@@ -133,7 +148,7 @@ int client_proc_state_machine() {
                 if(trainer == NULL) printf("client %d -> no available trainer found\r\n", client->pid);
                 else {
                     copy_trainer(&client->current_trainer, trainer);
-                    printf("client %d -> trainer current client %d\r\n", client->pid, client->current_trainer.pid);
+                    printf("client %d -> trainer %d current client %d\r\n", client->pid, client->current_trainer.pid, client->current_trainer.client_pid);
                 }
 
                 shutdown = true;
@@ -143,10 +158,7 @@ int client_proc_state_machine() {
 
             default:
                 printf("CLIENT %d UNKOWN STATE \r\n", getpid());
-                client_del(client);
-                gym_del(gym);
-                close_shared_gym();
-                return -1;
+                shutdown = true;
         }
 
 
@@ -165,6 +177,11 @@ int client_proc_state_machine() {
         //}
     }
 
+    client_list_rem_client(client, gym->arrivingList);
+    client_list_rem_client(client, gym->waitingList);
+    client_list_rem_client(client, gym->workoutList);
+    update_shared_gym(gym);
+
     client_del(client);
     gym_del(gym);
     close_shared_gym();
@@ -173,7 +190,6 @@ int client_proc_state_machine() {
 
     return 0;
 }
-
 
 
 
@@ -235,16 +251,13 @@ const char* client_to_string(Client *client, char buffer[]) {
     sprintf(buffer, "pid: %d", client->pid);
     sprintf(buffer + strlen(buffer), "   state: %d", client->state);
 
-    //if(client->current_trainer != NULL)
-        sprintf(buffer + strlen(buffer), "   trainer: %d", client->current_trainer.pid);
+    sprintf(buffer + strlen(buffer), "   trainer: %d", client->current_trainer.pid);
 
-    //if(client->current_couch != NULL) {
-        int sem_val;
-        sprintf(buffer + strlen(buffer), "   couch: %d", sem_getvalue(&client->current_couch.couch_mutex, &sem_val));
-    //}
+    int sem_val;
+    sprintf(buffer + strlen(buffer), "   couch: %d", sem_getvalue(&client->current_couch.couch_mutex, &sem_val));
 
-    //if(client->workout != NULL)
-        sprintf(buffer + strlen(buffer), "   workout: %d", client->workout.total_weight);
+
+    sprintf(buffer + strlen(buffer), "   workout: %d", client->workout.total_weight);
 
     return buffer;
 }
@@ -306,6 +319,12 @@ int client_list_add_client(Client *client, ClientList *list) {
     if(new_node == NULL) {
         perror("client_list_add_client malloc()");
         return -1;
+    }
+
+    // Check if we're already in list
+    if(client_list_find_pid(client->pid, list) != NULL) { 
+        free(new_node);
+        return 1;
     }
 
     new_node->node = client;
@@ -405,7 +424,7 @@ Client* client_list_find_pid(pid_t pid, ClientList *list) {
 
     ClientNode *tmp = list->HEAD;
     while(tmp != NULL) {
-        if(tmp->node->pid = pid) return tmp->node;
+        if(tmp->node->pid == pid) return tmp->node;
         tmp = tmp->next;
     }
     return NULL;

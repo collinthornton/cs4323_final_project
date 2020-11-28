@@ -8,9 +8,13 @@
 // ########################################## 
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 #include "trainer.h"
+#include "workout_room.h"
 #include "gym.h"
 
 //////////////////////////////
@@ -41,6 +45,83 @@ int trainer_proc_state_machine() {
     int pid = getpid();
 
     Gym *gym = gym_init();
+    open_shared_gym();
+    update_gym(gym);
+
+    if(gym == NULL) {
+        perror("trainer_proc_state_machine get shared gym");
+        return -1;
+    }
+
+    Trainer *trainer = trainer_init(pid, -1, FREE);
+    Client *client;
+
+    trainer_list_add_trainer(trainer, gym->trainerList);
+    update_shared_gym(gym);
+    update_gym(gym);
+
+    char buffer[BUFFER_SIZE] = "\0";
+
+    bool shutdown = false;
+
+    while(!shutdown) {
+
+
+        switch(trainer->state) {
+            case FREE:
+                printf("trainer %d waiting for client\r\n", pid);
+                if(gym->waitingList->len > 0) {
+                    client = gym->waitingList->HEAD->node;
+                    if(client != NULL) {
+                        trainer->state = WITH_CLIENT;
+                        trainer->client_pid = client->pid;
+                        update_shared_gym(gym);
+                        printf("trainer found client %d\r\n", trainer->client_pid);
+                    }
+                }
+                else sleep(1*gym->unit_time);
+
+                sleep(2*gym->unit_time);
+                //shutdown = true;
+                break;
+
+            case ON_PHONE:
+
+
+                break;
+
+            case TRAVELLING:
+                printf("trainer %d -> TRAVELLING\r\n", pid);
+                
+                sleep(1*gym->unit_time);
+                shutdown = true;
+
+                break;
+
+            case WITH_CLIENT:
+                printf("trainer %d -> WITH_CLIENT %d\r\n", pid, trainer->client_pid);
+                sleep(2*gym->unit_time);
+                trainer_workout_event(gym, trainer);
+                trainer->state = TRAVELLING;
+                
+                break;
+        }
+
+        update_shared_gym(gym);
+        update_gym(gym);
+    }
+
+    printf("Trainer %d destroying data\r\n", getpid());
+    trainer_list_rem_trainer(trainer, gym->trainerList);
+    update_shared_gym(gym);
+
+    trainer_del(trainer);
+    gym_del(gym);
+    close_shared_gym();
+
+    printf("Trainer %d exiting\r\n", getpid());
+
+    return 0;
 }
 
 
@@ -48,8 +129,10 @@ int trainer_proc_state_machine() {
 
 
 
-
-
+//////////////////////////////
+//
+// Trainer struct functions
+//
 
 
 
@@ -85,7 +168,7 @@ const char* trainer_to_string(Trainer *trainer, char buffer[]) {
 
     sprintf(buffer, "pid: %d", trainer->pid);
     sprintf(buffer + strlen(buffer), "   state: %d", trainer->state);
-    //sprintf(buffer + strlen(buffer), "   trainer: %ld", trainer->current_client);
+    sprintf(buffer + strlen(buffer), "   client: %d", trainer->client_pid);
     return buffer;
 }
 
@@ -137,6 +220,11 @@ int trainer_list_add_trainer(Trainer *trainer, TrainerList *list) {
     if(new_node == NULL) {
         perror("trainer_list_add_trainer malloc()");
         return -1;
+    }
+
+    if(trainer_list_find_pid(trainer->pid, list) != NULL) {
+        free(new_node);
+        return 1;
     }
 
     new_node->node = trainer;

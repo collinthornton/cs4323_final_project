@@ -1,10 +1,9 @@
 {
     "tasks": [
         {
-            "type": "cppbuild",
+            "type": "shell",
             "label": "build",
-            "command": "${workspaceFolder}/build.sh",
-            "args": ["${workspaceFolder}"],
+            "command": "make",
             "group": {
                 "kind": "build",
                 "isDefault": true
