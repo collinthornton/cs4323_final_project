@@ -17,6 +17,8 @@
 
 #define MAX_TRAINERS 4
 
+sem_t *trainer_sem;
+
 typedef enum {
     FREE,
     ON_PHONE,
@@ -46,6 +48,11 @@ typedef struct {
 
 // EACH CLIENT SHOULD BE ON A DIFFERENT PROCESS
 // - should maintain a finite state machine
+int init_trainer_sem();
+int open_trainer_sem();
+void close_trainer_sem();
+void destroy_trainer_sem();
+
 pid_t trainer_start();
 int trainer_proc_state_machine();
 

@@ -14,6 +14,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
+
+
+#include <sys/stat.h>
 
 #define MAX_LINE_SIZE 1024
 
@@ -23,6 +27,73 @@ static const char* FILENAME = "data/weight_allocation.txt";
 static const char* TMP_FILENAME = "data/weight_allocation.tmp";
 
 
+static char RESOURCE_MANAGER_SEM_NAME[] = "/sem_resource_manager";
+
+
+
+int init_resource_manager() {
+    sem_unlink(RESOURCE_MANAGER_SEM_NAME);
+    resource_manager_sem = sem_open(RESOURCE_MANAGER_SEM_NAME, O_CREAT, 0644, 1);
+    if(resource_manager_sem == SEM_FAILED) {
+        perror("init_resource_manager sem failed to open");
+        exit(1);
+    }
+
+    mkdir("./data", 0644);
+
+    const char *INITIAL_WRITE = "\n"
+        "# WEIGHT ALLOCATION MATRICES FOR GYM\n"
+        "# SPECIAL CHARACTERS:\n"
+        "#   #  -> Comment. Program ignores line\n"
+        "#   ,  -> Delimeter\n"
+        "#  --- -> Section divider\n"
+        "# SECTION 1 -> AVAILABLE\n"
+        "# SECTION 2 -> ALLOCATION\n"
+        "# SECTION 3 -> REQUEST\n"
+        "# pid,2.5,5,10,15,20,25,35,45\n"
+        "\n"
+        "# AVAILABLE\n"
+        "# 2.5,5,10,15,20,25,35,45\n"
+        "\n"
+        "10,10,10,10,10,10,10,10\n"
+        "---\n"
+        "---\n"
+        //"1234,0,0,1,0,0,2,0,2\n,"
+        "---\n"
+        "\n";
+
+    // TAKE THE SEMAPHORE
+    sem_wait(resource_manager_sem);
+
+
+    // initalize the file
+    FILE *file = fopen(FILENAME, "w");
+    fputs(INITIAL_WRITE, file);
+    fclose(file);
+
+    sem_post(resource_manager_sem);
+
+    return 0;
+}
+
+int open_resource_manager() {
+    resource_manager_sem = sem_open(RESOURCE_MANAGER_SEM_NAME, O_CREAT, 0644, 1);
+    if(resource_manager_sem == SEM_FAILED) {
+        perror("init_resource_manager sem failed to open");
+        exit(1);
+    }    
+    return 0;
+}
+
+void close_resource_manager() {
+    sem_close(resource_manager_sem);
+    return;
+}
+
+void destroy_resource_manager() {
+    sem_unlink(RESOURCE_MANAGER_SEM_NAME);
+    return;
+}
 
 static WeightMatrix* weight_matrix_init() {
     WeightMatrix* matrix = malloc(sizeof(WeightMatrix));
@@ -139,7 +210,7 @@ static int weight_matrix_sub_req(pid_t pid, Weight *weight, WeightMatrix *matrix
     return matrix->num_rows;
 }
 
-static WeightMatrixRow* weight_matrix_search(pid_t pid, WeightMatrix *matrix, int *row_number) {
+WeightMatrixRow* weight_matrix_search(pid_t pid, WeightMatrix *matrix, int *row_number) {
     if(matrix == NULL || matrix->rows == NULL) return NULL;
 
     for(int i=0; i<matrix->num_rows; ++i) {
@@ -163,7 +234,6 @@ const char* weight_matrix_to_string(WeightMatrix *matrix, char buffer[]) {
     }
     return buffer;
 }
-
 
 Weight* getGymResources() {
     Weight *database = getWeightFromFile(0);
@@ -361,9 +431,13 @@ static WeightMatrix* getWeightMatrixFromFile(unsigned int section) {
 
 
 int grantWeightRequest(pid_t pid) {
+    sem_wait(resource_manager_sem);
     WeightMatrix *tot_request = getWeightRequest();
     WeightMatrix *tot_allocation = getWeightAllocation();
     Weight *currently_availble = getAvailableWeights();
+
+    Weight *tmp = weight_init(NULL);
+    weight_matrix_add_req(pid, tmp, tot_allocation);
 
     int req_row, alloc_row;
     WeightMatrixRow *request = weight_matrix_search(pid, tot_request, &req_row);
@@ -374,19 +448,22 @@ int grantWeightRequest(pid_t pid) {
         weight_matrix_del(tot_allocation);
         weight_matrix_del(tot_request);
         weight_del(currently_availble);
+        sem_post(resource_manager_sem);
         return -1;
     }
 
+
     vector_add(allocation->weight->num_plates, request->weight->num_plates, NUMBER_WEIGHTS);
-    vector_subtract(request->weight->num_plates, request->weight->num_plates, NUMBER_WEIGHTS);
-    
-    if(vector_less_than_equal(allocation->weight->num_plates, currently_availble->num_plates, NUMBER_WEIGHTS) == false) {
+
+    if(vector_less_than_equal(request->weight->num_plates, currently_availble->num_plates, NUMBER_WEIGHTS) == false) {
         //perror("grantWeightRequest() allocation out of bounds");
         weight_matrix_del(tot_allocation);
         weight_matrix_del(tot_request);
         weight_del(currently_availble);
-        return -1;
+        sem_post(resource_manager_sem);
+        return -2;
     }
+    vector_subtract(request->weight->num_plates, request->weight->num_plates, NUMBER_WEIGHTS);
     
     writeWeightMatrixToFile(tot_allocation, 1);
     writeWeightMatrixToFile(tot_request, 2);
@@ -395,12 +472,14 @@ int grantWeightRequest(pid_t pid) {
     weight_matrix_del(tot_request);
     weight_del(currently_availble);
 
+    sem_post(resource_manager_sem);
     return 0;
 }
 
 
 
 int writeWeightAllocation(pid_t pid, Weight *weight) {
+    sem_wait(resource_manager_sem);
     WeightMatrix *alloc_matrix = getWeightAllocation();
     WeightMatrix *req_matrix = getWeightRequest();
     Weight *tmp_weight = weight_init(NULL);
@@ -412,9 +491,11 @@ int writeWeightAllocation(pid_t pid, Weight *weight) {
     writeWeightMatrixToFile(req_matrix, 2);
     weight_matrix_del(alloc_matrix);
     weight_matrix_del(req_matrix);
+    sem_post(resource_manager_sem);
     return ret;
 }
 int writeWeightRequest(pid_t pid, Weight *weight) {
+    sem_wait(resource_manager_sem);
     WeightMatrix *req_matrix = getWeightRequest();
     WeightMatrix *alloc_matrix = getWeightAllocation();
     Weight *tmp_weight = weight_init(NULL);
@@ -427,6 +508,7 @@ int writeWeightRequest(pid_t pid, Weight *weight) {
 
     weight_matrix_del(req_matrix);
     weight_matrix_del(alloc_matrix);
+    sem_post(resource_manager_sem);
     return ret;
 }
 
@@ -442,11 +524,11 @@ static int writeWeightMatrixToFile(WeightMatrix *matrix, int section) {
 
     short file_flag = 0;
     if(file == NULL) {
-        perror("writeWeightToFile fopen()");
+        perror("writeWeightMatrixToFile file");
         file_flag = 1;
     }
     if(new_file == NULL) {
-        perror("writeWeightMatrixToFile fopen()");
+        perror("writeWeightMatrixToFile new_file");
         file_flag += 2;
     }
 
@@ -501,11 +583,13 @@ static int writeWeightMatrixToFile(WeightMatrix *matrix, int section) {
 
 
 int releaseWeightAllocation(pid_t pid, Weight *weight) {
+    sem_wait(resource_manager_sem);
     WeightMatrix *matrix = getWeightAllocation();
 
     WeightMatrixRow *row = weight_matrix_search(pid, matrix, NULL);
     if (row == NULL) {
         weight_matrix_del(matrix);
+        sem_post(resource_manager_sem);
        return -1;
     }
 
@@ -513,11 +597,13 @@ int releaseWeightAllocation(pid_t pid, Weight *weight) {
     if(vector_negative(row->weight->num_plates, NUMBER_WEIGHTS)) {
         perror("removeWeightAllocation() invalid argument");
         weight_matrix_del(matrix);
+        sem_post(resource_manager_sem);
         return -1;
     }
 
     int ret = writeWeightMatrixToFile(matrix, 1);
     weight_matrix_del(matrix);
+    sem_post(resource_manager_sem);
     return ret;
 }
 int removeWeightRequest(pid_t pid, Weight *weight) {

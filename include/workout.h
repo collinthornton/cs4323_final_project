@@ -15,7 +15,7 @@
 #include "gym_resources.h"
 
 #define MAX_WEIGHT 300
-#define MIN_WEIGHT 5
+#define MIN_WEIGHT 250
 
 typedef struct {
     int total_sets;

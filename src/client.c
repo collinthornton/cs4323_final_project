@@ -19,6 +19,7 @@
 #include "gym.h"
 #include "entrance.h"
 #include "workout_room.h"
+#include "resource_manager.h"
 
 
 //////////////////////////////
@@ -44,6 +45,8 @@ pid_t client_start() {
 
 int client_proc_state_machine() {
 
+    open_resource_manager();
+    
     int pid = getpid();
 
     Gym *gym = gym_init();
@@ -72,8 +75,6 @@ int client_proc_state_machine() {
                 client_list_add_client(client, gym->arrivingList);
                 update_shared_gym(gym);
 
-                //client = client_list_find_pid(pid, gym->arrivingList);
-                client_list_to_string(gym->arrivingList, buffer);
                 
                 printf("\r\n CHILD ARRIVING LIST (%d) \r\n%s\r\n", getpid(), buffer);
                 printf("child trainer pid -> %d\r\n\r\n", gym->arrivingList->HEAD->node->current_trainer.pid);
@@ -81,7 +82,8 @@ int client_proc_state_machine() {
 
                 client_list_rem_client(client, gym->arrivingList);
                 client->state = WAITING;
-                //sleep(5*gym->unit_time); 
+                sleep(2*gym->unit_time); 
+
                 //client_arriving_event(gym, client);               
                 break;
 
@@ -99,8 +101,8 @@ int client_proc_state_machine() {
                     copy_trainer(&client->current_trainer, trainer);
                 }
 
-                trainer_list_to_string(gym->trainerList, buffer);
-                printf("client %d -> trainer list\r\n%s\r\n", getpid(), buffer);
+                //trainer_list_to_string(gym->trainerList, buffer);
+                //printf("client %d -> trainer list\r\n%s\r\n", getpid(), buffer);
 
                 sleep(1*gym->unit_time);
 
@@ -141,19 +143,9 @@ int client_proc_state_machine() {
                 break;
 
             case LEAVING:
-                trainer_list_to_string(gym->trainerList, buffer);
-                printf("Client %d -> trainer_list\r\n%s\r\n\r\n", client->pid, buffer);
                 
-                trainer = trainer_list_find_available(gym->trainerList);
-                if(trainer == NULL) printf("client %d -> no available trainer found\r\n", client->pid);
-                else {
-                    copy_trainer(&client->current_trainer, trainer);
-                    printf("client %d -> trainer %d current client %d\r\n", client->pid, client->current_trainer.pid, client->current_trainer.client_pid);
-                }
-
+                printf("client %d leaving\r\n", pid);
                 shutdown = true;
-
-                // DO OTHER THINGS
                 break;
 
             default:
@@ -165,17 +157,11 @@ int client_proc_state_machine() {
         // Update local & shared memory
         update_shared_gym(gym);
         update_gym(gym);
-
-        //client = client_list_find_pid(pid, gym->arrivingList);
-        //if(client == NULL) client = client_list_find_pid(pid, gym->waitingList);
-        //if(client == NULL) client = client_list_find_pid(pid, gym->workoutList);
-        //if(client == NULL) {
-        //    perror("client_proc_state_machine client not found");
-        //    gym_del(gym);
-        //    close_shared_gym();
-        //    return -1;
-        //}
     }
+
+    // Remove client from any lists & close semaphores
+
+    printf("Client %d destroying data\r\n", getpid());
 
     client_list_rem_client(client, gym->arrivingList);
     client_list_rem_client(client, gym->waitingList);
@@ -184,9 +170,12 @@ int client_proc_state_machine() {
 
     client_del(client);
     gym_del(gym);
+    
     close_shared_gym();
-    // Remove client from any lists
-    // Exit cleanly
+    close_resource_manager();
+    close_trainer_sem();
+
+    printf("Client %d exiting\r\n", getpid());
 
     return 0;
 }

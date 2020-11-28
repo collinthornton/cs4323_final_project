@@ -31,6 +31,7 @@ typedef struct {
 
     int maxCouches;
     int unit_time; // seconds
+    pid_t deadlock_victim;
 } SharedGym;
 
 typedef struct {
@@ -40,7 +41,8 @@ typedef struct {
     TrainerList* trainerList;
 
     int maxCouches;
-    int unit_time; // seconds    
+    int unit_time; // seconds   
+    pid_t deadlock_victim; 
 } Gym;
 
 void open_gym(int numberTrainers, int numberCouches, int numberClients, int useSemaphors);

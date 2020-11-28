@@ -15,7 +15,12 @@
 
 #include "trainer.h"
 #include "workout_room.h"
+#include "resource_manager.h"
 #include "gym.h"
+
+
+
+static const char TRAINER_SEM_NAME[] = "/sem_trainer";
 
 //////////////////////////////
 //
@@ -42,9 +47,15 @@ pid_t trainer_start() {
 
 int trainer_proc_state_machine() {
 
+    srand(getpid());
+
+    open_trainer_sem();
+    open_resource_manager();
+
     int pid = getpid();
 
     Gym *gym = gym_init();
+
     open_shared_gym();
     update_gym(gym);
 
@@ -64,25 +75,46 @@ int trainer_proc_state_machine() {
 
     bool shutdown = false;
 
+    const int MAX_WAIT = 5;
+    int num_wait = 0;
+
     while(!shutdown) {
 
 
         switch(trainer->state) {
             case FREE:
                 printf("trainer %d waiting for client\r\n", pid);
+                sem_wait(trainer_sem);
+                int val;
+                sem_getvalue(trainer_sem, &val);
+
+                update_gym(gym);
+
                 if(gym->waitingList->len > 0) {
-                    client = gym->waitingList->HEAD->node;
-                    if(client != NULL) {
+                    ClientNode *node = gym->waitingList->HEAD;
+                    while(node != NULL) {
+                        // Check if client is already claimed by a trainer
+                        Trainer *tmp = trainer_list_find_client(node->node->pid, gym->trainerList);
+                        if(tmp == NULL) break;
+                        node = node->next;
+                    }
+                    if(node != NULL) {
                         trainer->state = WITH_CLIENT;
-                        trainer->client_pid = client->pid;
-                        update_shared_gym(gym);
+                        trainer->client_pid = node->node->pid;
                         printf("trainer found client %d\r\n", trainer->client_pid);
+                        num_wait = 0;
                     }
                 }
-                else sleep(1*gym->unit_time);
+                else {
+                    ++num_wait;
+                    if(num_wait == MAX_WAIT) shutdown = true;
+                }
+
+                update_shared_gym(gym);
+
+                sem_post(trainer_sem);
 
                 sleep(2*gym->unit_time);
-                //shutdown = true;
                 break;
 
             case ON_PHONE:
@@ -94,7 +126,7 @@ int trainer_proc_state_machine() {
                 printf("trainer %d -> TRAVELLING\r\n", pid);
                 
                 sleep(1*gym->unit_time);
-                shutdown = true;
+                trainer->state = FREE;
 
                 break;
 
@@ -111,13 +143,19 @@ int trainer_proc_state_machine() {
         update_gym(gym);
     }
 
+    // Remove trainer from lists & destroy semaphores
+
     printf("Trainer %d destroying data\r\n", getpid());
+
     trainer_list_rem_trainer(trainer, gym->trainerList);
     update_shared_gym(gym);
 
     trainer_del(trainer);
     gym_del(gym);
+
     close_shared_gym();
+    close_resource_manager();
+    close_trainer_sem();
 
     printf("Trainer %d exiting\r\n", getpid());
 
@@ -126,7 +164,33 @@ int trainer_proc_state_machine() {
 
 
 
+int init_trainer_sem() {
+    sem_unlink(TRAINER_SEM_NAME);
+    trainer_sem = sem_open(TRAINER_SEM_NAME, O_CREAT, 0644, 1);
+    if(trainer_sem == SEM_FAILED) {
+        perror("trainer_sem_init failed to open");
+        exit(1);
+    }
+}
 
+int open_trainer_sem() {
+    trainer_sem = sem_open(TRAINER_SEM_NAME, O_CREAT, 0644, 1);
+    if(trainer_sem == SEM_FAILED) {
+        perror("trainer_sem_init failed to open");
+        exit(1);
+    }
+    return 0;
+}
+
+void close_trainer_sem() {
+    sem_close(trainer_sem);
+    return;
+}
+
+void destroy_trainer_sem() {
+    sem_unlink(TRAINER_SEM_NAME);
+    return;
+}
 
 
 //////////////////////////////

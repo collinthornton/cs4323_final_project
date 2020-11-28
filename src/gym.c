@@ -30,7 +30,6 @@
 
 static SharedGym *sharedGym;
 static char SHARED_GYM_SEM_NAME[] = "/sem_shmem_gym";
-static bool sem_opened = false;
 
 
 int init_shared_gym(int maxCouches){
@@ -41,8 +40,6 @@ int init_shared_gym(int maxCouches){
         exit(1);
     }
     
-    sem_opened = true;
-
     int sharedMemoryID;
     int *sharedMemoryAddress;
 
@@ -80,6 +77,7 @@ int init_shared_gym(int maxCouches){
 
     sharedGym->maxCouches = maxCouches;
     sharedGym->unit_time = UNIT_TIME;
+    sharedGym->deadlock_victim = -1;
 
     if (shmdt(sharedGym) == -1){
         sem_post(shared_gym_sem);
@@ -101,16 +99,15 @@ Gym* gym_init() {
     gym->trainerList = trainer_list_init();
     gym->unit_time = UNIT_TIME;
     gym->maxCouches = 0;
+    gym->deadlock_victim = -1;
 
     return gym;
 }
 
 void open_shared_gym(){
-    if(sem_opened == false)
-        shared_gym_sem = sem_open(SHARED_GYM_SEM_NAME, O_CREAT, 0644, 1);
-
+    shared_gym_sem = sem_open(SHARED_GYM_SEM_NAME, O_CREAT, 0644, 1);
     if(shared_gym_sem == SEM_FAILED) {
-        perror("open_shared_gym sem_failed");
+        perror("init_shared_gym sem_failed_to_open");
         exit(1);
     }
 
@@ -169,6 +166,13 @@ void update_shared_gym(Gym *gym) {
     //! We shouldn't change these
     //sharedGym->unit_time = gym->unit_time;
     //sharedGym->maxCouches = gym->maxCouches;
+
+
+    // Only the parent can set a victim for deadlock rollback
+    if(!in_list)  sharedGym->deadlock_victim = gym->deadlock_victim;
+
+    //! CURRENT VICTIM AUTOMATICALLY UNSETS ITSELF WHEN PUSHING TO SHARED MEM
+    if(getpid() == sharedGym->deadlock_victim) sharedGym->deadlock_victim = -1;
 
 
     // 1.) Iterate through array
@@ -284,6 +288,7 @@ Gym* update_gym(Gym *gym)  {
 
     sem_wait(shared_gym_sem);
 
+    gym->deadlock_victim = sharedGym->deadlock_victim;
     gym->maxCouches = sharedGym->maxCouches;
     gym->unit_time = sharedGym->unit_time;
 

@@ -12,29 +12,46 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "part2.h"
 #include "entrance.h"
 #include "workout_room.h"
 #include "deadlock.h"
 
-#define NUM_CLIENTS 1 //MAX_CLIENTS
-#define NUM_TRAINERS 1 //MAX_TRAINERS
+#define NUM_CLIENTS  MAX_CLIENTS
+#define NUM_TRAINERS MAX_TRAINERS
 
 #define NUM_COUCHES 3
 
 
 void start_part2(){
-    if(init_shared_gym(NUM_COUCHES) == 1) exit(1);
-    clearWeightFile();
 
+    // Set the random generator seed
+    srand(time(0));
+
+    //////////////////////////
+    //
+    // Initalized semaphores and shared memory
+    //
+
+    if(init_shared_gym(NUM_COUCHES) == 1) exit(1);
+    init_resource_manager();
+    init_trainer_sem();
+
+    sem_close(shared_gym_sem);
+    close_resource_manager();
+    close_trainer_sem();
+
+    //TODO Get rid of this if unneeded
+    //open_gym(3,3,5,0);
+
+    //////////////////////////
+    //
+    // Launch child processes
+    //
 
     printf("parent -> pid %d\r\n", getpid());
-
-    //open_gym(3,3,5,0);
-    //test_workout_room();
-
-    //test_deadlock_detection();
 
     printf("parent -> spawning %d clients\r\n", NUM_CLIENTS);
     pid_t client_pids[NUM_CLIENTS];
@@ -45,81 +62,101 @@ void start_part2(){
     
     for(int i=0; i<NUM_TRAINERS; ++i) trainer_pids[i] = trainer_start();
 
-    open_shared_gym();    
+
+    //////////////////////////
+    //
+    // Setup shared memory
+    //
+
+    open_shared_gym();   
+    open_resource_manager();
+    open_trainer_sem(); 
     
     Gym *gym = gym_init();
-    update_gym(gym);    
+    update_gym(gym);   
 
-    // DO PARENT STUFF
-    sleep(5);
 
-    char buffer[BUFFER_SIZE*(NUM_CLIENTS+1)] = "\0";
+    //////////////////////////
+    //
+    // Run parent tasks
+    // - Deadlock detection, etc.
+    // 
 
+    sleep(2*gym->unit_time);
     update_gym(gym);
-    trainer_list_to_string(gym->trainerList, buffer);
 
-    printf("\r\n\r\nTRAINER LIST\r\n");
-    printf("%s\r\n", buffer);
-    //printf("parent trainer list -> %d\r\n", gym->arrivingList->HEAD->node->current_trainer.pid);
+    while(gym->trainerList->len > 0) {
+
+        pid_t deadlock_array[MAX_CLIENTS];
+        int num_deadlocked = checkForDeadlock(deadlock_array);
+
+        printf("\r\nDEADLOCKED CLIENTS      ");
+
+        for(int i=0; i<num_deadlocked; ++i) {
+            printf("%d ", deadlock_array[i]);
+        }
+
+        if(num_deadlocked == 0) {
+            printf("NO DEADLOCKED PROCESSES\r\n\r\n");
+        }
+        else {
+            printf("\r\n\r\n");    
+
+            pid_t deadlock_victim;
+            int least_sets = 9999;
+            for(int i=0; i<num_deadlocked; ++i) {
+                Client *tmp = client_list_find_pid(deadlock_array[i], gym->workoutList);
+                if(tmp != NULL && (tmp->workout.total_sets - tmp->workout.sets_left) < least_sets) {
+                    printf("parent -> searching client %d with %d of %d sets completed\r\n", tmp->pid, tmp->workout.total_sets-tmp->workout.sets_left, tmp->workout.total_sets);
+                    deadlock_victim = tmp->pid;
+                }
+            }
+
+            gym->deadlock_victim = deadlock_victim;
+            printf("parent -> chose client %d as deadlock victim\r\n\r\n", deadlock_victim);
+        }
+
+        update_shared_gym(gym);
+        sleep(5*gym->unit_time);
+        update_gym(gym);
+    }
 
 
+    // test_workout_room();
 
 
-    // WAIT FOR PROCESS TO EXIT
+    //////////////////////////
+    //
+    // Wait for child processes to exit
+    //
+
     printf("parent -> waiting for processes to exit\r\n");
     for(int i=0; i<NUM_CLIENTS; ++i)  waitpid(client_pids[i], NULL, 0);
     for(int i=0; i<NUM_TRAINERS; ++i) waitpid(trainer_pids[i], NULL, 0);
 
-    //test_part2();
+
+
+    //////////////////////////
+    //
+    // Cleanup the mess
+    //
+
+    printf("parent -> destorying data\r\n");
 
     gym_del(gym);
     close_shared_gym();
     destroy_shared_gym();
+
+    close_resource_manager();
+    destroy_resource_manager();
+
+    close_trainer_sem();
+    destroy_trainer_sem();
 }
 
 
-void test_part2() {
-
-    pid_t pids[NUM_CLIENTS];
-
-    printf("parent pid: %d\r\n", getpid());
-    for(int i=0; i<NUM_CLIENTS; ++i) pids[i] = client_start();
-
-    Trainer *trainer = trainer_init(getpid(), pids[0], FREE);
-    
-    Gym *gym = gym_init();
-    trainer_list_add_trainer(trainer, gym->trainerList);
-
-    open_shared_gym();
-
-    update_shared_gym(gym);
-    update_gym(gym);
-    printf("parent %d -> unit time %d\r\n", getpid(), gym->unit_time);
-
-
-    sleep(2);
-
-    char buffer[BUFFER_SIZE*(NUM_CLIENTS+1)] = "\0";
-
-    update_gym(gym);
-    client_list_to_string(gym->arrivingList, buffer);
-
-    printf("parent %d -> ARRIVING LIST\r\n", getpid());
-    printf("parent %d -> %s\r\n", getpid(), buffer);
-    //printf("parent trainer id -> %d\r\n", gym->arrivingList->HEAD->node->current_trainer.pid);
-
-
-    //update_gym(gym);
-    client_list_to_string(gym->waitingList, buffer);
-
-    printf("parent %d -> WAITING LIST\r\n", getpid());
-    printf("parent %d -> %s\r\n", getpid(), buffer);
-
-
-    gym_del(gym);
-    close_shared_gym();
-}
 
 int main(int argc, char **argv) {
+    //test_deadlock_detection();
     start_part2();
 }
