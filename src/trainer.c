@@ -114,7 +114,7 @@ int trainer_proc_state_machine() {
 
                 sem_post(trainer_sem);
 
-                sleep(2*gym->unit_time);
+                delay(2*gym->unit_time);
                 break;
 
             case ON_PHONE:
@@ -125,14 +125,14 @@ int trainer_proc_state_machine() {
             case TRAVELLING:
                 printf("trainer %d -> TRAVELLING\r\n", pid);
                 
-                sleep(1*gym->unit_time);
+                delay(1*gym->unit_time);
                 trainer->state = FREE;
 
                 break;
 
             case WITH_CLIENT:
                 printf("trainer %d -> WITH_CLIENT %d\r\n", pid, trainer->client_pid);
-                sleep(2*gym->unit_time);
+                delay(2*gym->unit_time);
                 trainer_workout_event(gym, trainer);
                 trainer->state = TRAVELLING;
                 

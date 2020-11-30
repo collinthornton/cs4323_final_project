@@ -75,14 +75,10 @@ int client_proc_state_machine() {
                 client_list_add_client(client, gym->arrivingList);
                 update_shared_gym(gym);
 
-                
-                printf("\r\n CHILD ARRIVING LIST (%d) \r\n%s\r\n", getpid(), buffer);
-                printf("child trainer pid -> %d\r\n\r\n", gym->arrivingList->HEAD->node->current_trainer.pid);
-                
 
-                client_list_rem_client(client, gym->arrivingList);
                 client->state = WAITING;
-                sleep(2*gym->unit_time); 
+                delay(2*gym->unit_time); 
+                client_list_rem_client(client, gym->arrivingList);
 
                 //client_arriving_event(gym, client);               
                 break;
@@ -91,8 +87,10 @@ int client_proc_state_machine() {
                 client_list_add_client(client, gym->waitingList);
                 update_shared_gym(gym);
 
+                #ifdef VERBOSE
                 printf("client %d WAITING\r\n", getpid());
-                
+                #endif // VERBOSE
+
                 // Check if a trainer has picked us up
                 trainer = trainer_list_find_client(getpid(), gym->trainerList);
                 if(trainer != NULL) {
@@ -104,7 +102,7 @@ int client_proc_state_machine() {
                 //trainer_list_to_string(gym->trainerList, buffer);
                 //printf("client %d -> trainer list\r\n%s\r\n", getpid(), buffer);
 
-                sleep(1*gym->unit_time);
+                delay(1*gym->unit_time);
 
                 //client->state = LEAVING;
                 //update_shared_gym(gym);
@@ -126,7 +124,7 @@ int client_proc_state_machine() {
 
             case MOVING:
                     //This is the "traveling" piece, also a semaphore area
-                    //sleep(2*gym->unit_time);
+                    //delay(2*gym->unit_time);
                     //End the semaphore
                     client->state = WAITING;
                     update_shared_gym(gym);

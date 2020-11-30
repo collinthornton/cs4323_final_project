@@ -20,6 +20,8 @@
 #define SHARED_KEY 0x1234
 #define BUFFER_SIZE 1024
 
+// #define VERBOSE
+
 sem_t *shared_gym_sem;
 
 // MAINTAINS THE GYM DATABASE OF RESOURCES
@@ -30,7 +32,14 @@ typedef struct {
     Trainer trainerList[MAX_TRAINERS];
 
     int maxCouches;
-    int unit_time; // seconds
+    int num_trainers;
+    int unit_time; // milliseconds
+
+    bool realistic;
+    bool fix_deadlock;
+    bool detect_deadlock;
+    bool trainer_log;
+
     pid_t deadlock_victim;
 } SharedGym;
 
@@ -41,12 +50,19 @@ typedef struct {
     TrainerList* trainerList;
 
     int maxCouches;
+    int num_trainers;
+
+    bool realistic;
+    bool fix_deadlock;
+    bool detect_deadlock;
+    bool trainer_log;
+
     int unit_time; // seconds   
     pid_t deadlock_victim; 
 } Gym;
 
 void open_gym(int numberTrainers, int numberCouches, int numberClients, int useSemaphors);
-int init_shared_gym(int maxCouches);
+int init_shared_gym(int maxCouches, int numTrainers, bool realistic, bool detectDeadlock, bool fixDeadlock, bool trainerLog);
 Gym* gym_init();
 
 Gym* update_gym(Gym *gym);
@@ -60,5 +76,7 @@ void destroy_shared_gym();
 Client* copy_client(Client *dest, Client *src);
 Trainer* copy_trainer(Trainer* dest, Trainer *src);
 
+
+void delay(long mS);
 
 #endif // GYM_H

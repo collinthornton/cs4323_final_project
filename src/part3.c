@@ -2,8 +2,8 @@
 // 
 //   Author  -   Collin Thornton
 //   Email   -   collin.thornton@okstate.edu
-//   Brief   -   Final Project part2 driver
-//   Date    -   11-20-20
+//   Brief   -   Final Project part3 driver
+//   Date    -   11-30-20
 //
 // ########################################## 
 
@@ -20,10 +20,9 @@
 int main(int argc, char **argv) {
     printf("\r\nCS4323 FINAL PROJECT GROUP D\r\n");
     printf("GYM SIMULATOR\r\n\r\n");
-    printf("2nd Driver File -> Parts b & c\r\n\r\n");
+    printf("3rd Driver File -> Parts b, d, & e\r\n\r\n");
     printf("Collin Thornton\r\nRobert Cook\r\nTyler Krebs\r\n\r\n");
-    printf("Usage: ./part2 <NUM_TRAINERS> <NUM_COUCHES>\n\n");
-
+    printf("Usage: ./part3 <NUM_TRAINERS> <NUM_COUCHES>\n\n");
 
     if(argc != 3) {
         exit(-1);
@@ -42,5 +41,5 @@ int main(int argc, char **argv) {
     }
 
 
-    start_sim(num_trainers, num_couches, false, true, false, false);
+    start_sim(num_trainers, num_couches, false, true, true, true);
 }

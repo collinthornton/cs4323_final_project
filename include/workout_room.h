@@ -17,16 +17,13 @@
 #include "client.h"
 
 
-
-
-void start_workout_room(void);
-
+void init_workout_room(bool detect_deadlock, bool fix_deadlock);
 
 int client_workout_event(Gym *gym, Client *client);
 int trainer_workout_event(Gym *gym, Trainer *trainer);
 
 int trainer_set_workout(Gym *gym, Trainer *trainer);
-int client_get_workout(Gym *gym, Client *client, Trainer *trainer);
+int client_get_workout(Gym *gym, Client *client, Trainer *trainer, bool first_time);
 
 int client_get_weights(Gym *gym, Client *client);
 bool client_request_weight_allocation(Gym *gym, Client *client, Weight *weight);

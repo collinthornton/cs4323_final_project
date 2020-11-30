@@ -18,10 +18,11 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <time.h>
 
 #include "gym.h"
 
-#define UNIT_TIME 1       // Seconds
+#define UNIT_TIME 250       // Milliseconds
 
 //////////////////////////////
 //
@@ -32,7 +33,7 @@ static SharedGym *sharedGym;
 static char SHARED_GYM_SEM_NAME[] = "/sem_shmem_gym";
 
 
-int init_shared_gym(int maxCouches){
+int init_shared_gym(int maxCouches, int numTrainers, bool realistic, bool detectDeadlock, bool fixDeadlock, bool trainerLog){
     sem_unlink(SHARED_GYM_SEM_NAME);
     shared_gym_sem = sem_open(SHARED_GYM_SEM_NAME, O_CREAT, 0644, 1);
     if(shared_gym_sem == SEM_FAILED) {
@@ -76,6 +77,11 @@ int init_shared_gym(int maxCouches){
     }
 
     sharedGym->maxCouches = maxCouches;
+    sharedGym->num_trainers = numTrainers;
+    sharedGym->realistic = realistic;
+    sharedGym->fix_deadlock = fixDeadlock;
+    sharedGym->detect_deadlock = detectDeadlock;
+    sharedGym->trainer_log = trainerLog;
     sharedGym->unit_time = UNIT_TIME;
     sharedGym->deadlock_victim = -1;
 
@@ -98,6 +104,11 @@ Gym* gym_init() {
     gym->workoutList = client_list_init();
     gym->trainerList = trainer_list_init();
     gym->unit_time = UNIT_TIME;
+    gym->num_trainers = 0;
+    gym->realistic = false;
+    gym->detect_deadlock = false;
+    gym->fix_deadlock = false;
+    gym->trainer_log = false;
     gym->maxCouches = 0;
     gym->deadlock_victim = -1;
 
@@ -291,6 +302,11 @@ Gym* update_gym(Gym *gym)  {
     gym->deadlock_victim = sharedGym->deadlock_victim;
     gym->maxCouches = sharedGym->maxCouches;
     gym->unit_time = sharedGym->unit_time;
+    gym->num_trainers = sharedGym->num_trainers;
+    gym->realistic = sharedGym->realistic;
+    gym->fix_deadlock = sharedGym->fix_deadlock;
+    gym->detect_deadlock = sharedGym->detect_deadlock;
+    gym->trainer_log = sharedGym->trainer_log;
 
     // Update everything with differnet pid
     for(int i=0; i < MAX_CLIENTS; ++i) {
@@ -406,4 +422,17 @@ Trainer* copy_trainer(Trainer *dest, Trainer *src) {
 
     *dest = *src;
     return dest;
+}
+
+
+void delay(long mS) {
+    struct timespec ts;
+
+    ts.tv_sec = mS / 1000;
+    ts.tv_nsec = (mS % 1000) * 1000000L;
+
+    int ret;
+    do {
+        ret = nanosleep(&ts, &ts);
+    } while(ret == -1 && errno == EINTR);
 }

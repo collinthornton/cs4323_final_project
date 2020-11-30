@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <math.h>
 
 #include "client.h"
 #include "workout_room.h"
@@ -18,13 +19,9 @@
 #include "workout.h"
 #include "vector.h"
 
-#define CAUSE_DEADLOCK
 
-#define MAX_WAIT_ITER 20
+static int init_weight;
 
-void start_workout_room() {
-    return;
-}
 
 
 
@@ -58,10 +55,14 @@ int client_workout_event(Gym *gym, Client *client) {
 
     
     // GET THE INTIAL WORKOUT FROM THE TRAINER
-    client_get_workout(gym, client, trainer);
+    client_get_workout(gym, client, trainer, true);
     update_shared_gym(gym);
 
-    printf("client %d got workout. total weight: %d\r\n", getpid(), client->workout.total_weight);
+    if(!gym->realistic)
+        printf("client %d got workout. total sets: %d\r\n", getpid(), client->workout.total_sets);
+
+    else
+        printf("client %d got workout. total weight: %d\r\n", getpid(), client->workout.total_weight);
 
     for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) client->workout.in_use.num_plates[i] = 0;
     client->workout.sets_left = client->workout.total_sets;
@@ -72,8 +73,13 @@ int client_workout_event(Gym *gym, Client *client) {
     
     //! SHOULD BE IN A DIFFERENT FUNCTION FOR ROLLBACK
     for(int i=0; i<client->workout.total_sets; ++i) {
-        sleep(1*gym->unit_time);
-        printf("client %d performing set %d of %d\r\n", getpid(), i+1, client->workout.total_sets);
+        delay(1*gym->unit_time);
+
+        if(!gym->realistic)
+            printf("client %d performing set %d of %d\r\n", getpid(), i+1, client->workout.total_sets);
+            
+        else
+            printf("client %d performing set %d of %d with %d weight\r\n", getpid(), i+1, client->workout.total_sets, client->workout.total_weight);
 
         // Redo the set if we're the deadlock victim
         if(client_get_weights(gym, client) == -2) {
@@ -82,30 +88,16 @@ int client_workout_event(Gym *gym, Client *client) {
             --i;
             continue;
         }
+        client->workout.total_weight = -1;
         update_shared_gym(gym);       
        
         client_lift_weights(gym, client);
         update_shared_gym(gym);
 
-        #ifndef CAUSE_DEADLOCK
-        releaseWeightAllocation(getpid(), &client->workout.in_use);
-        #endif // CAUSE_DEADLOCK
-        
-        // Let the trainer change the weight
-        //client_get_workout(gym, client, trainer);
-        //client->workout.sets_left = client->workout.total_sets - i;
-        //update_shared_gym(gym);
-
-        // Get the new weights
-        //client_get_weights(gym, client);
-        //update_shared_gym(gym);
-
-        //--client->workout.sets_left;
+        client_get_workout(gym, client, trainer, false);
     }
 
-    #ifdef CAUSE_DEADLOCK
     releaseWeightAllocation(getpid(), &client->workout.in_use);
-    #endif // CAUSE_DEADLOCK
 
     printf("client %d finished workout\r\n", getpid());
 
@@ -117,7 +109,6 @@ int client_workout_event(Gym *gym, Client *client) {
 
 
     update_shared_gym(gym);
-
 }
 
 
@@ -145,35 +136,57 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
     }
 
     // CREATE THE WORKOUT AND SEND TO CLIENT
+    init_weight = rand();
+
     trainer_set_workout(gym, trainer);
     update_shared_gym(gym);
 
-    printf("trainer %d picked workout for client %d: total_weight %d, num_sets %d\r\n", getpid(), trainer->client_pid, trainer->workout.total_weight, trainer->workout.total_sets);
-
-
-    // NOW WAIT FOR CLIENT TO LEAVE THE WORKOUT. TIMEOUT AFTER 10 SECONDS
-    // TODO make a way to cancel this
-
-    int num_iter = 0;
-
-    while(client != NULL && num_iter < MAX_WAIT_ITER) {
-        //printf("Trainer %d waiting for client to finish set\r\n", getpid());
-
-        sleep(2*gym->unit_time);
+    // WAIT FOR CLIENT TO ACKNOWLEDGE WORKOUT
+    while(client->workout.total_weight <= 0) {
+        delay(2*gym->unit_time);
         update_gym(gym);
         trainer = trainer_list_find_pid(getpid(), gym->trainerList);
         client = client_list_find_pid(trainer->client_pid, gym->workoutList);
-       // ++num_iter;
+    }       
+
+    if(!gym->realistic)
+        printf("trainer %d picked workout for client %d: num_sets %d\r\n", getpid(), trainer->client_pid, trainer->workout.total_sets);
+
+    else
+        printf("trainer %d picked workout for client %d: total_weight %d, num_sets %d\r\n", getpid(), trainer->client_pid, trainer->workout.total_weight, trainer->workout.total_sets);
+
+
+    // NOW WAIT FOR CLIENT TO LEAVE THE WORKOUT
+    while(client != NULL) {        
+        #ifdef VERBOSE
+        printf("Trainer %d waiting for client to finish set\r\n", getpid());
+        #endif // VERBOSE
+
+        int old_weight = trainer->workout.total_weight;
+
+        trainer_set_workout(gym, trainer);
+        update_shared_gym(gym);
+        update_gym(gym);
+        trainer = trainer_list_find_pid(getpid(), gym->trainerList);
+        client = client_list_find_pid(trainer->client_pid, gym->workoutList);
+
+        //printf("trainer %d picked %d weight for client %d\r\n", getpid(), trainer->workout.total_weight, trainer->client_pid);
+
+        // WAIT FOR CLIENT TO GRAB WEIGHTS
+        while(client != NULL && client->workout.total_weight == old_weight) {
+            delay(2*gym->unit_time);
+            update_gym(gym);
+            trainer = trainer_list_find_pid(getpid(), gym->trainerList);
+            client = client_list_find_pid(trainer->client_pid, gym->workoutList);
+            //printf("trainer %d stuck. client weight %d\r\n", getpid(), client->workout.total_weight);
+        }
+        delay(2*gym->unit_time);
     }
 
     trainer->workout.sets_left = -1;
     trainer->workout.total_sets = -1;
     trainer->workout.total_weight = -1;
 
-    if(num_iter == MAX_WAIT_ITER) {
-        perror("trainer_workout_event timeout waiting for client");
-        return -1;
-    }
 
     printf("trainer %d client finished workout out\r\n", getpid());
 
@@ -194,14 +207,17 @@ int trainer_set_workout(Gym *gym, Trainer *trainer) {
     // TODO This will need to setup to cause deadlock
 
     // GENERATE TOTAL WEIGHT, SHOULD BE A MULTIPLE OF 5
-    int total_weight = (rand() % (MAX_WEIGHT - MIN_WEIGHT + 1)) + MIN_WEIGHT;
+
+    static int weight_increase = 0;
+    weight_increase += 5;
+
+    int total_weight = ((init_weight) % (MAX_WEIGHT - MIN_WEIGHT + 1)/2) + weight_increase;
+    total_weight = (total_weight > MAX_WEIGHT*2) ? 2*MAX_WEIGHT : total_weight;
     total_weight = 5 * (total_weight/5);
 
     // GENERATE TOTAL SETS
-    //int total_sets = (rand() % 5) + 1;
-
-    int total_sets = 5;             // Easier to just set to a number
-    int sets_left = -1;             // Decided by the client
+    int total_sets = (rand() % 11) + 1;;    
+    int sets_left = -1;                     // Decided by the client
 
     trainer->workout.sets_left = sets_left;
     trainer->workout.total_sets = total_sets;
@@ -212,29 +228,32 @@ int trainer_set_workout(Gym *gym, Trainer *trainer) {
 
 
 
-int client_get_workout(Gym *gym, Client *client, Trainer *trainer) {
-    // WAIT FOR THE TRAINER TO SEND US A WORKOUT. MAX 10 SECONDS
-    int num_wait = 0;
-    while(trainer->workout.total_weight <= 0 && num_wait < MAX_WAIT_ITER) {
+int client_get_workout(Gym *gym, Client *client, Trainer *trainer, bool first_time) {
+    // WAIT FOR THE TRAINER TO SEND US A WORKOUT
+    update_gym(gym);
+    trainer = trainer_list_find_client(getpid(), gym->trainerList);
+
+    while(trainer->workout.total_weight <= 0) {
+        #ifdef VERBOSE
         printf("client %d waiting for workout\r\n", getpid());
-        sleep(1*gym->unit_time);
+        #endif //VERBOSE
+        delay(1*gym->unit_time);
 
         update_gym(gym);
-        trainer = trainer_list_find_pid(client->current_trainer.pid, gym->trainerList);
         client = client_list_find_pid(getpid(), gym->workoutList);
-
-        ++num_wait;
-    }
-
-    if(num_wait == MAX_WAIT_ITER) {
-        perror("client_workout_event timed out waiting for workout");
-        return -1;
+        trainer = trainer_list_find_pid(client->current_trainer.pid, gym->trainerList);
     }
 
     // TRAINER SENT WORKOUT. COPY TO CLIENT
-    client->workout.total_sets = trainer->workout.total_sets;
-    client->workout.sets_left = client->workout.total_sets;
+    if(first_time) {
+        client->workout.total_sets = trainer->workout.total_sets;
+        client->workout.sets_left = client->workout.total_sets;
+    }
     client->workout.total_weight = trainer->workout.total_weight;
+
+    if(gym->realistic)
+        printf("client %d updated workout to weight %d from trainer %d\r\n", getpid(), client->workout.total_weight, trainer->pid);
+
     return 0;
 }
 
@@ -245,88 +264,114 @@ int client_get_weights(Gym *gym, Client *client) {
 
     int weights[NUMBER_WEIGHTS];
     
-    #ifndef CAUSE_DEADLOCK
-    weights[FORTY_FIVE] = 0;//2*(weight_left/45/2);
-    weight_left -= 45*weights[FORTY_FIVE];
+    if(gym->realistic) {
+        weights[FORTY_FIVE] = 2*(weight_left/45/2);
+        weights[FORTY_FIVE] = (weights[FORTY_FIVE] > 4) ? 4 : weights[FORTY_FIVE];
+        weight_left -= 45*weights[FORTY_FIVE];
 
-    weights[THIRTY_FIVE] = 0;//2*(weight_left/35/2);
-    weight_left -= 35*weights[THIRTY_FIVE];
+        weights[THIRTY_FIVE] = 2*(weight_left/35/2);
+        weights[THIRTY_FIVE] = (weights[THIRTY_FIVE] > 4) ? 4 : weights[THIRTY_FIVE];
+        weight_left -= 35*weights[THIRTY_FIVE];
 
-    weights[TWENTY_FIVE] = 2*(weight_left/25/2);
-    weight_left -= 25*weights[TWENTY_FIVE];
+        weights[TWENTY_FIVE] = 2*(weight_left/25/2);
+        weights[TWENTY_FIVE] = (weights[TWENTY_FIVE] > 4) ? 4 : weights[TWENTY_FIVE];
+        weight_left -= 25*weights[TWENTY_FIVE];
 
-    weights[TWENTY] = 2*(weight_left/20/2);
-    weight_left -= 20*weights[TWENTY];
+        weights[TWENTY] = 2*(weight_left/20/2);
+        weights[TWENTY] = (weights[TWENTY] > 4) ? 4 : weights[TWENTY];
+        weight_left -= 20*weights[TWENTY];
 
-    weights[FIFTEEN] = 2*(weight_left/15/2);
-    weight_left -= 15*weights[FIFTEEN];
+        weights[FIFTEEN] = 2*(weight_left/15/2);
+        weights[FIFTEEN] = (weights[FIFTEEN] > 4) ? 4 : weights[FIFTEEN];
+        weight_left -= 15*weights[FIFTEEN];
 
-    weights[TEN] = 2*(weight_left/10/2);
-    weight_left -= 10*weights[TEN];
+        weights[TEN] = 2*(weight_left/10/2);
+        weights[TEN] = (weights[TEN] > 4) ? 4 : weights[TEN];
+        weight_left -= 10*weights[TEN];
 
-    weights[FIVE] = 2*(weight_left/5/2);
-    weight_left -= 5*weights[FIVE];
+        weights[FIVE] = 2*(weight_left/5/2);
+        weights[FIVE] = (weights[FIVE] > 4) ? 4 : weights[FIVE];
+        weight_left -= 5*weights[FIVE];
 
-    weights[TWO_HALF] = 2*(int)(weight_left/2.5/2);
-    weight_left -= (int)(2.5*weights[TWO_HALF]);
+        weights[TWO_HALF] = 2*(int)(weight_left/2.5/2);
+        weights[TWO_HALF] = (weights[TWO_HALF] > 4) ? 4 : weights[TWO_HALF];
+        weight_left -= (int)(2.5*weights[TWO_HALF]);
 
-    if(weight_left != 0) {
-        perror("client_workout_event weight_left nonzero");
-        printf("%d\r\n", weight_left);
-        return -1;
+        if(weight_left != 0) {
+            perror("client_workout_event weight_left nonzero");
+            printf("%d\r\n", weight_left);
+            return -1;
+        }
+    }
+    else {
+        #ifdef VERBOSE
+        printf("Client %d has %d sets left\r\n", getpid(), client->workout.sets_left);
+        #endif // VERBOSE
+        
+        switch(client->workout.sets_left) {
+            case 11:
+                for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 1;
+                break;        
+            case 10:
+                for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 3;
+                break;
+            case 9:
+                for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 8;
+                break;
+            case 8:
+                for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 9;
+                break;
+            case 7:
+                for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 10;
+                break;
+            case 6:
+                for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 6;
+                break;        
+            case 5:
+                for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 8;
+                break;
+            case 4:
+                for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 5;
+                break;
+            case 3:
+                for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 7;
+                break;
+            case 2:
+                for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 6;
+                break;
+            case 1:
+                for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 5;
+                break;
+        } 
     }
 
     Weight *request = weight_init(weights);
-
-    #else
-
-    printf("Client %d has %d sets left\r\n", getpid(), client->workout.sets_left);
-    switch(client->workout.sets_left) {
-        case 5:
-            for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 2;
-            break;
-        case 4:
-            for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 5;
-            break;
-        case 3:
-            for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 7;
-            break;
-        case 2:
-            for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 6;
-            break;
-        case 1:
-            for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 5;
-            break;
-    }
-
-    //for(int i=TWO_HALF; i<=FORTY_FIVE; ++i) weights[i] = 5+(rand() % 5);
- 
-    Weight *request = weight_init(weights);
-
-
     vector_subtract(request->num_plates, client->workout.in_use.num_plates, NUMBER_WEIGHTS);
-
-    #endif // CAUSE_DEADLOCK
-
 
     Weight req = *request;
 
+    #ifdef VERBOSE
     char buffer[BUFFER_SIZE] = "\0";
     weight_to_string(&client->workout.in_use, buffer);
+    
+    
     printf("client %d in use\r\n%s\r\n", getpid(), buffer);
-
     weight_to_string(request, buffer);
     printf("client %d making weight request\r\n%s\r\n", getpid(), buffer);
+    #endif // VERBOSE
 
     int ret;
     while((ret = writeWeightRequest(getpid(), request)) < 0) {
+        #ifdef VERBOSE
         printf("client %d request denied: %d\r\n", getpid(), ret);
-        sleep(1*gym->unit_time);
+        #endif // VERBOSE
+        delay(1*gym->unit_time);
     }
 
-
+    #ifdef VERBOSE
     printf("client %d successfully requested weights\r\n", getpid());
-    sleep(2*gym->unit_time);
+    #endif // VERBOSE
+    delay(2*gym->unit_time);
 
 
 
@@ -337,7 +382,7 @@ int client_get_weights(Gym *gym, Client *client) {
 
         // CHECK IF WE'RE SET AS THE DEADLOCK VICTIM
         if(gym->deadlock_victim == getpid()) {
-            printf("\r\n Client %d targeted as deadlock victim -> releasing weight allocation and requests\r\n\r\n", getpid());
+            printf("\r\nClient %d targeted as deadlock victim -> releasing weight allocation and requests\r\n\r\n", getpid());
 
 
             releaseWeightAllocation(getpid(), &client->workout.in_use); 
@@ -346,11 +391,13 @@ int client_get_weights(Gym *gym, Client *client) {
             Weight *tmp_req = weight_init(req.num_plates);
             removeWeightRequest(getpid(), tmp_req);
 
+            #ifdef VERBOSE
             weight_to_string(&client->workout.in_use, buffer);
             printf("Client %d released allocation\r\n%s\r\n", getpid(), buffer);
 
             weight_to_string(&req, buffer);
             printf("Client %d release request\r\n%s\r\n", getpid(), buffer);
+            #endif // VERBOSE
 
             // Roll back a set
             //++client->workout.sets_left;
@@ -375,15 +422,18 @@ int client_get_weights(Gym *gym, Client *client) {
 bool client_request_weight_allocation(Gym *gym, Client *client, Weight *weight) {
     int ret;
     while((ret = grantWeightRequest(getpid())) < 0 && gym->deadlock_victim != getpid()) {
+        #ifdef VERBOSE
         printf("Client %d allocation denied\r\n", getpid());
-        sleep(1*gym->unit_time);
+        #endif // VERBOSE
+
+        delay(1*gym->unit_time);
         update_gym(gym);
     }
     return (ret == 0) ? true : false;
 }
 
 void client_lift_weights(Gym *gym, Client *client) {
-    sleep(2*gym->unit_time);
+    delay(2*gym->unit_time);
     --client->workout.sets_left;
 }
 

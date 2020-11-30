@@ -55,10 +55,9 @@ int init_resource_manager() {
         "# AVAILABLE\n"
         "# 2.5,5,10,15,20,25,35,45\n"
         "\n"
-        "10,10,10,10,10,10,10,10\n"
+        "12,12,12,12,12,12,12,12\n"
         "---\n"
         "---\n"
-        //"1234,0,0,1,0,0,2,0,2\n,"
         "---\n"
         "\n";
 
@@ -607,10 +606,12 @@ int releaseWeightAllocation(pid_t pid, Weight *weight) {
     return ret;
 }
 int removeWeightRequest(pid_t pid, Weight *weight) {
+    sem_wait(resource_manager_sem);
     WeightMatrix *matrix = getWeightRequest();
     weight_matrix_sub_req(pid, weight, matrix);
     int ret = writeWeightMatrixToFile(matrix, 2);
     weight_matrix_del(matrix);
+    sem_post(resource_manager_sem);
     return ret;
 }
 

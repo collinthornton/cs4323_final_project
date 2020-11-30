@@ -14,6 +14,9 @@
 
 #define NUMBER_WEIGHTS 8
 
+#define MIN_COUCHES 3
+#define MAX_COUCHES 6
+
 
 typedef struct {
     sem_t couch_mutex;      //! MAY BE EASIER TO JUST MAKE A SEMAPHORE

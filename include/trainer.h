@@ -15,7 +15,8 @@
 
 #include "workout.h"
 
-#define MAX_TRAINERS 4
+#define MIN_TRAINERS 3
+#define MAX_TRAINERS 5
 
 sem_t *trainer_sem;
 
