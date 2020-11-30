@@ -14,13 +14,15 @@
 
 #include "gym_resources.h"
 
+#define MAX_WEIGHT 300
+#define MIN_WEIGHT 250
 
 typedef struct {
     int total_sets;
     int sets_left;
     
     int total_weight;
-    Weight* in_use;
+    Weight in_use;
 } Workout;
 
 

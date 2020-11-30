@@ -94,7 +94,7 @@ bool vector_negative(int *v1, int size) {
  * @return (int*) v1 = v1 + v2
  */
  int* vector_add(int *v1, int *v2, int size) {
-    if(v1 == NULL || v2 == NULL) return false;
+    if(v1 == NULL || v2 == NULL) return NULL;
     for(int i=0; i<size; ++i) v1[i] += v2[i];
     return v1;
 }
@@ -108,7 +108,7 @@ bool vector_negative(int *v1, int size) {
  * @return (int*) v1 = v1 - v2
  */
  int* vector_subtract(int *v1, int *v2, int size) {
-    if(v1 == NULL || v2 == NULL) return false;
+    if(v1 == NULL || v2 == NULL) return NULL;
     for(int i=0; i<size; ++i) v1[i] -= v2[i];
     return v1;
 }

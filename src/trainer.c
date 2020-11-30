@@ -8,9 +8,196 @@
 // ########################################## 
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 #include "trainer.h"
+#include "workout_room.h"
+#include "resource_manager.h"
+#include "gym.h"
+
+
+
+static const char TRAINER_SEM_NAME[] = "/sem_trainer";
+
+//////////////////////////////
+//
+// Trainer process functions
+//
+
+pid_t trainer_start() {
+    pid_t pid = fork();
+
+    if(pid < 0) {
+        perror("trainer_start() fork");
+        return pid;
+    }
+    else if(pid == 0) {
+        printf("new trainer pid: %d\r\n", getpid());
+        int ret = trainer_proc_state_machine();
+        exit(ret);
+    }
+    else {
+        return pid;
+    }
+}
+
+
+int trainer_proc_state_machine() {
+
+    srand(getpid());
+
+    open_trainer_sem();
+    open_resource_manager();
+
+    int pid = getpid();
+
+    Gym *gym = gym_init();
+
+    open_shared_gym();
+    update_gym(gym);
+
+    if(gym == NULL) {
+        perror("trainer_proc_state_machine get shared gym");
+        return -1;
+    }
+
+    Trainer *trainer = trainer_init(pid, -1, FREE);
+    Client *client;
+
+    trainer_list_add_trainer(trainer, gym->trainerList);
+    update_shared_gym(gym);
+    update_gym(gym);
+
+    char buffer[BUFFER_SIZE] = "\0";
+
+    bool shutdown = false;
+
+    const int MAX_WAIT = 5;
+    int num_wait = 0;
+
+    while(!shutdown) {
+
+
+        switch(trainer->state) {
+            case FREE:
+                printf("trainer %d waiting for client\r\n", pid);
+                sem_wait(trainer_sem);
+                int val;
+                sem_getvalue(trainer_sem, &val);
+
+                update_gym(gym);
+
+                if(gym->waitingList->len > 0) {
+                    ClientNode *node = gym->waitingList->HEAD;
+                    while(node != NULL) {
+                        // Check if client is already claimed by a trainer
+                        Trainer *tmp = trainer_list_find_client(node->node->pid, gym->trainerList);
+                        if(tmp == NULL) break;
+                        node = node->next;
+                    }
+                    if(node != NULL) {
+                        trainer->state = WITH_CLIENT;
+                        trainer->client_pid = node->node->pid;
+                        printf("trainer found client %d\r\n", trainer->client_pid);
+                        num_wait = 0;
+                    }
+                }
+                else {
+                    ++num_wait;
+                    if(num_wait == MAX_WAIT) shutdown = true;
+                }
+
+                update_shared_gym(gym);
+
+                sem_post(trainer_sem);
+
+                sleep(2*gym->unit_time);
+                break;
+
+            case ON_PHONE:
+
+
+                break;
+
+            case TRAVELLING:
+                printf("trainer %d -> TRAVELLING\r\n", pid);
+                
+                sleep(1*gym->unit_time);
+                trainer->state = FREE;
+
+                break;
+
+            case WITH_CLIENT:
+                printf("trainer %d -> WITH_CLIENT %d\r\n", pid, trainer->client_pid);
+                sleep(2*gym->unit_time);
+                trainer_workout_event(gym, trainer);
+                trainer->state = TRAVELLING;
+                
+                break;
+        }
+
+        update_shared_gym(gym);
+        update_gym(gym);
+    }
+
+    // Remove trainer from lists & destroy semaphores
+
+    printf("Trainer %d destroying data\r\n", getpid());
+
+    trainer_list_rem_trainer(trainer, gym->trainerList);
+    update_shared_gym(gym);
+
+    trainer_del(trainer);
+    gym_del(gym);
+
+    close_shared_gym();
+    close_resource_manager();
+    close_trainer_sem();
+
+    printf("Trainer %d exiting\r\n", getpid());
+
+    return 0;
+}
+
+
+
+int init_trainer_sem() {
+    sem_unlink(TRAINER_SEM_NAME);
+    trainer_sem = sem_open(TRAINER_SEM_NAME, O_CREAT, 0644, 1);
+    if(trainer_sem == SEM_FAILED) {
+        perror("trainer_sem_init failed to open");
+        exit(1);
+    }
+}
+
+int open_trainer_sem() {
+    trainer_sem = sem_open(TRAINER_SEM_NAME, O_CREAT, 0644, 1);
+    if(trainer_sem == SEM_FAILED) {
+        perror("trainer_sem_init failed to open");
+        exit(1);
+    }
+    return 0;
+}
+
+void close_trainer_sem() {
+    sem_close(trainer_sem);
+    return;
+}
+
+void destroy_trainer_sem() {
+    sem_unlink(TRAINER_SEM_NAME);
+    return;
+}
+
+
+//////////////////////////////
+//
+// Trainer struct functions
+//
+
 
 
 Trainer* trainer_init(pid_t pid, pid_t client_pid, TrainerState state) {
@@ -24,6 +211,11 @@ Trainer* trainer_init(pid_t pid, pid_t client_pid, TrainerState state) {
     trainer->pid = pid;
     trainer->state = state;
     trainer->client_pid = client_pid;
+    
+    Workout *tmp = workout_init(-1, -1, -1, NULL);
+    trainer->workout = *tmp;
+    workout_del(tmp);
+
     return trainer;
 }
 
@@ -40,7 +232,7 @@ const char* trainer_to_string(Trainer *trainer, char buffer[]) {
 
     sprintf(buffer, "pid: %d", trainer->pid);
     sprintf(buffer + strlen(buffer), "   state: %d", trainer->state);
-    //sprintf(buffer + strlen(buffer), "   trainer: %ld", trainer->current_client);
+    sprintf(buffer + strlen(buffer), "   client: %d", trainer->client_pid);
     return buffer;
 }
 
@@ -58,13 +250,13 @@ TrainerList* trainer_list_init() {
     return list;
 }
 
-int trainer_list_del_trainers(TrainerList *list) {
+int trainer_list_del_trainers(pid_t exclude, TrainerList *list) {
     if(list == NULL) return 0;
 
     TrainerNode *tmp = list->HEAD;
 
     while(tmp != NULL) {
-        trainer_del(tmp->node);
+        if(tmp->node->pid != exclude) trainer_del(tmp->node);
         tmp = tmp->next;
     }
     return 0;
@@ -92,6 +284,11 @@ int trainer_list_add_trainer(Trainer *trainer, TrainerList *list) {
     if(new_node == NULL) {
         perror("trainer_list_add_trainer malloc()");
         return -1;
+    }
+
+    if(trainer_list_find_pid(trainer->pid, list) != NULL) {
+        free(new_node);
+        return 1;
     }
 
     new_node->node = trainer;
@@ -209,6 +406,16 @@ Trainer* trainer_list_find_available(TrainerList *list) {
     return NULL;
 }
 
+Trainer* trainer_list_find_pid(pid_t pid, TrainerList *list) {
+    if(list == NULL) return NULL;
+
+    TrainerNode *tmp = list->HEAD;
+    while(tmp != NULL) {
+        if(tmp->node->pid == pid) return tmp->node;
+        tmp = tmp->next;
+    }
+    return NULL;
+}
 
 TrainerNode* trainer_list_srch(Trainer *trainer, TrainerList *list) {
     if (trainer == NULL || list == NULL) return NULL;

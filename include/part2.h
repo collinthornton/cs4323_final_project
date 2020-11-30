@@ -13,7 +13,6 @@
 
 
 void start_part2();
-void test_part2();
 
 
 

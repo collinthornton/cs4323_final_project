@@ -11,6 +11,8 @@
 #ifndef WORKOUT_ROOM_H
 #define WORKOUT_ROOM_H
 
+#include <stdbool.h>
+
 #include "gym.h"
 #include "client.h"
 
@@ -20,15 +22,14 @@
 void start_workout_room(void);
 
 
-int client_workout_event(Gym *gym, SharedGym *shGym,  Client *client);
-int trainer_workout_event(Gym *gym, SharedGym *shGym, Trainer *trainer);
+int client_workout_event(Gym *gym, Client *client);
+int trainer_workout_event(Gym *gym, Trainer *trainer);
 
-int init_shared_workout(int maxWeight);
-int trainer_set_worktout();
-Workout* client_get_workout();
+int trainer_set_workout(Gym *gym, Trainer *trainer);
+int client_get_workout(Gym *gym, Client *client, Trainer *trainer);
 
-Weight* client_get_weights();
-void client_replace_weights(Weight* weight);
+int client_get_weights(Gym *gym, Client *client);
+bool client_request_weight_allocation(Gym *gym, Client *client, Weight *weight);
 
 void client_lift_weights();
 

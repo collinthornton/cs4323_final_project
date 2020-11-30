@@ -12,6 +12,8 @@
 #ifndef RESOURCE_MANAGER_H
 #define RESOURCE_MANAGER_H
 
+#include <semaphore.h>
+
 #include "gym.h"
 
 
@@ -26,11 +28,17 @@ typedef struct{
 } WeightMatrix;
 
 
+sem_t *resource_manager_sem;
+
 //////////////////////////////
 //
 //  USER FUNCTIONS
 //
 
+int init_resource_manager();
+int open_resource_manager();
+void close_resource_manager();
+void destroy_resource_manager();
 
 // FUNCTIONS TO GET WEIGHT REQUESTS FROM FILE
 /**
@@ -164,7 +172,7 @@ static WeightMatrix* weight_matrix_init();
  * @param row_number (int*) storage for the row number. negative if row not found. can be set to NULL if not neededd
  * @return (WeightMatrixRow*) pointer to the row. NULL if not found
  */
-static WeightMatrixRow* weight_matrix_search(pid_t pid, WeightMatrix *matrix, int *row_number);
+WeightMatrixRow* weight_matrix_search(pid_t pid, WeightMatrix *matrix, int *row_number);
 
 
 /**

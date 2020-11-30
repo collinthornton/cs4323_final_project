@@ -63,7 +63,7 @@ const char* client_to_string(Client *client, char buffer[]);
 
 ClientList* client_list_init();
 int client_list_del(ClientList *list);
-int client_list_del_clients(ClientList *list);
+int client_list_del_clients(pid_t exclude, ClientList *list);
 int client_list_add_client(Client *client, ClientList* list);
 int client_list_rem_client(Client *client, ClientList *list);
 
