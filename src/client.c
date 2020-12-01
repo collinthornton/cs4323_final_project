@@ -27,6 +27,9 @@ static const char CLIENT_ARRIVING_SEM_NAME[] = "/sem_client_arriving";
 static const char CLIENT_WAITING_SEM_NAME[] = "/sem_client_waiting";
 
 
+static sem_t *client_arriving_sem;
+static sem_t *client_waiting_sem;
+
 
 //////////////////////////////
 //

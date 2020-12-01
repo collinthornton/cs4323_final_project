@@ -18,7 +18,6 @@
 #define MIN_TRAINERS 3
 #define MAX_TRAINERS 5
 
-sem_t *trainer_sem;
 
 typedef enum {
     FREE,

@@ -28,8 +28,6 @@ typedef struct{
 } WeightMatrix;
 
 
-sem_t *resource_manager_sem;
-
 //////////////////////////////
 //
 //  USER FUNCTIONS

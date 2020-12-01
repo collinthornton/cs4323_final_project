@@ -22,7 +22,6 @@
 
 // #define VERBOSE
 
-sem_t *shared_gym_sem;
 
 // MAINTAINS THE GYM DATABASE OF RESOURCES
 typedef struct {

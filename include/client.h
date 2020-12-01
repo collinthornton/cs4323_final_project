@@ -18,9 +18,6 @@
 
 #define MAX_CLIENTS 10
 
-sem_t *client_arriving_sem;
-sem_t *client_waiting_sem;
-
 typedef enum {
     ARRIVING,
     WAITING,

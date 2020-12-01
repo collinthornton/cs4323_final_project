@@ -24,6 +24,9 @@
 
 #define UNIT_TIME 250       // Milliseconds
 
+static sem_t *shared_gym_sem;
+
+
 //////////////////////////////
 //
 // Gym functions

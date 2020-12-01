@@ -21,6 +21,9 @@
 
 #define MAX_LINE_SIZE 1024
 
+static sem_t *resource_manager_sem;
+
+
 // #define SUB_DELETE_ROW // UNCOMMENT TO DELETE MATRIX ROW WHEN SUBTRACTION = 0
 
 static const char* FILENAME = "data/weight_allocation.txt";

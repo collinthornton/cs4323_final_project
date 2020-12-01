@@ -23,6 +23,9 @@
 
 static const char TRAINER_SEM_NAME[] = "/sem_trainer";
 
+
+static sem_t *trainer_sem;
+
 //////////////////////////////
 //
 // Trainer process functions
