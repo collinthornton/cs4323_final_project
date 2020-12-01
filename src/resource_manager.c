@@ -243,6 +243,7 @@ Weight* getGymResources() {
 }
 
 Weight* getAvailableWeights() {
+    sem_wait(resource_manager_sem);
     Weight *total = getGymResources();
     WeightMatrix *allocated = getWeightAllocation();
     
@@ -255,6 +256,7 @@ Weight* getAvailableWeights() {
 
     weight_matrix_del(allocated);
     weight_del(total_used);
+    sem_post(resource_manager_sem);
     return total;
 }
 
@@ -334,11 +336,19 @@ Weight* getWeightFromFile(unsigned int section) {
 
 
 WeightMatrix* getWeightAllocation() {
-   return getWeightMatrixFromFile(1);
+    sem_wait(resource_manager_sem);
+    WeightMatrix* ret = getWeightMatrixFromFile(1);
+    sem_post(resource_manager_sem);
+
+   return ret;
 }
 
 WeightMatrix* getWeightRequest() {
-    return getWeightMatrixFromFile(2);    
+    sem_wait(resource_manager_sem);
+    WeightMatrix* ret = getWeightMatrixFromFile(2);
+    sem_post(resource_manager_sem);
+
+    return ret;    
 }
 
 

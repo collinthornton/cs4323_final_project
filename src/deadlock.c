@@ -15,39 +15,6 @@
 #include "vector.h"
 
 
-/*
-
-int checkForDeadlock(pid_t deadlock_array[]) {
-    Weight *available  = getAvailableWeights();
-    WeightMatrix *allocation = getWeightAllocation();
-    WeightMatrix *request = getWeightRequest();
-
-
-    Weight *summation = weight_init(NULL);
-    for(int i=0; i<allocation->num_rows; ++i) {
-]        vector_add(summation->num_plates, request->rows[i].weight->num_plates, NUMBER_WEIGHTS);
-    }
-
-    if(!vector_less_than_equal(summation->num_plates, available->num_plates, NUMBER_WEIGHTS)) {
-        // CURRENTLY BLOCKED NOW CHECK FOR DEADLOCK
-
-    }
-    else {
-        // NO CHANCE FOR DEADLOCK
-        return 0;
-    }
-
-}
-*/
-
-
-
-
-
-
-
-
-
 int checkForDeadlock(pid_t deadlock_array[]) {
     // BASED ON ALGORITHM DESCRIBED ON PG 339 OF TEXTBOOK
 
