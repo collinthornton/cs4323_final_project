@@ -49,14 +49,11 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
     openRecordBook();
     clearRecordBook();
 
-    sem_close(shared_gym_sem);
+    close_shared_gym();
     close_resource_manager();
     close_trainer_sem();
     close_client_sem();
     closeRecordBook();
-
-    //TODO Get rid of this if unneeded
-    //open_gym(3,3,5,0);
 
     //////////////////////////
     //
@@ -68,10 +65,6 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
     printf("parent -> spawning %d trainers\r\n", num_trainers);
     pid_t trainer_pids[num_trainers];
     for(int i=0; i<num_trainers; ++i) trainer_pids[i] = trainer_start();
-
-
-    //if(boundary_case)
-    //    sleep(3);
 
 
     int num_clients = num_couches - 1;
