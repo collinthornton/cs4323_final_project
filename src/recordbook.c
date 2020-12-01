@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <semaphore.h>
+#include <pthread.h>
 #include "recordbook.h"
 
 /*Semaphore for the ensuring mutual exclusion*/
-sem_t mutual_exclusion;
+pthread_mutex_t lock;
 
 /* Default file name */
 #define DEFAULT_RECORD_FILE "recordbook.txt"
@@ -21,7 +21,7 @@ void addToRecordBook(struct emp *empValue)
 {
     FILE *fp = NULL;
 
-    sem_wait(&mutual_exclusion);
+    pthread_mutex_lock(&lock);
     /*
      * Open the file in the append mode.
      * */
@@ -32,7 +32,7 @@ void addToRecordBook(struct emp *empValue)
     }
     fwrite( empValue, sizeof( *empValue ), 1, fp );
     fclose(fp);
-    sem_post(&mutual_exclusion);
+    pthread_mutex_unlock(&lock);
 }
 
 /* Display the records stored in the file.
@@ -41,7 +41,7 @@ void displayRecordBook()
 {
     FILE *fp = NULL;
     struct emp empVal;
-    sem_wait(&mutual_exclusion);
+    pthread_mutex_lock(&lock);
     /*
      * Open the file in the append mode.
      * */
@@ -57,7 +57,7 @@ void displayRecordBook()
         memset(&empVal, 0x00, sizeof(empVal));
     }
     fclose(fp);
-    sem_post(&mutual_exclusion);
+    pthread_mutex_unlock(&lock);
 }
 
 /* Opens the file and truncates it, implying all the records are cleared.
@@ -65,21 +65,21 @@ void displayRecordBook()
 void clearRecordBook()
 {
     FILE *fp = NULL;
-    sem_wait(&mutual_exclusion);
+    pthread_mutex_lock(&lock);
     fp = fopen(RecordFileName, "w");
     if (fp == NULL)
     {
         printf("Failed to open the file. \n");
     }
     fclose(fp);
-    sem_post(&mutual_exclusion);
+    pthread_mutex_unlock(&lock);
 }
 
 /* The function MUST be called before invoking any of the record logging operation.
  * */
 void initRecordBook(char *filename)
 {
-    sem_init(&mutual_exclusion,0,1);
+    pthread_mutex_init(&lock,NULL);
     if (filename)
     {
         RecordFileName = filename;
