@@ -45,7 +45,7 @@ void addToRecordBook(struct emp *empValue)
     fp = fopen(RecordFileName, "a");
     if (fp == NULL)
     {
-        printf("Failed to open the file. \n");
+        perror("Failed to open the file. \n");
     }
 
     char buffer[1024];
@@ -56,7 +56,6 @@ void addToRecordBook(struct emp *empValue)
 
     fputs(buffer, fp);
 
-    //fwrite( empValue, sizeof( *empValue ), 1, fp );
     fclose(fp);
 
     printf("%d LEFT LOCKED AREA\r\n", getpid());
@@ -76,7 +75,7 @@ void displayRecordBook()
     fp = fopen(RecordFileName, "r");
     if (fp == NULL)
     {
-        printf("Failed to open the file. \n");
+        perror("Failed to open the file. \n");
     }
 
     while (fread(&empVal, sizeof(empVal), 1, fp) ==  1)
@@ -97,7 +96,7 @@ void clearRecordBook()
     fp = fopen(RecordFileName, "w");
     if (fp == NULL)
     {
-        printf("Failed to open the file. \n");
+        perror("Failed to open the file. \n");
     }
     fclose(fp);
     pthread_mutex_unlock(&lock);
@@ -136,14 +135,14 @@ void initRecordBook()
     shared_mutex = shmat(sharedMemoryID, NULL, 0);
 
      if (shared_mutex == (void *) -1){
-        printf("Could not attached to the shared memory\n");
+        perror("Could not attached to the shared memory\n");
         return;
     }   
 
     pthread_mutex_init(&shared_mutex->mutex, &psharedm);
 
     if (shmdt(shared_mutex) == -1){
-        printf("Something happened trying to detach from shared memory\n");
+        perror("Something happened trying to detach from shared memory\n");
         return;
     }
 
@@ -159,14 +158,14 @@ void openRecordBook() {
 
     if (sharedMemoryID == -1){
         //something went wrong here
-        printf("Something went wrong allocating the shared memory space\n");
+        perror("Something went wrong allocating the shared memory space\n");
         return;
     }
 
     shared_mutex = shmat(sharedMemoryID, NULL, 0);
 
     if (shared_mutex == (void *) -1){
-        printf("Could not attached to the shared memory\n");
+        perror("Could not attached to the shared memory\n");
         return;
     }    
 
@@ -178,7 +177,7 @@ void openRecordBook() {
 
 void closeRecordBook() {
     if (shmdt(shared_mutex) == -1){
-        printf("Something happened trying to detach from shared memory\n");
+        perror("Something happened trying to detach from shared memory\n");
         return;
     }        
 }
@@ -188,7 +187,7 @@ void destroyRecordBook() {
     
     if (shmctl(sharedMemoryID,IPC_RMID,0) == -1){
         // It's already been closed by another process. Just ignore.
-        printf("Something went wrong with the shmctl function\n");
+        perror("Something went wrong with the shmctl function\n");
         return;
     }        
 }

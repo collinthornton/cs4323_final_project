@@ -67,7 +67,7 @@ int init_shared_gym(int maxCouches, int numTrainers, bool boundaryCase, bool rea
 
     if (sharedGym == (void *) -1){
         sem_post(shared_gym_sem);
-        printf("Could not attached to the shared memory\n");
+        perror("Could not attached to the shared memory\n");
         return 1;
     }
 
@@ -97,7 +97,7 @@ int init_shared_gym(int maxCouches, int numTrainers, bool boundaryCase, bool rea
 
     if (shmdt(sharedGym) == -1){
         sem_post(shared_gym_sem);
-        printf("Something happened trying to detach from shared memory\n");
+        perror("Something happened trying to detach from shared memory\n");
         return 1;
     }
  
@@ -142,7 +142,7 @@ void open_shared_gym(){
 
     if (sharedMemoryID == -1){
         //something went wrong here
-        printf("Something went wrong allocating the shared memory space\n");
+        perror("Something went wrong allocating the shared memory space\n");
         return;
     }
 
@@ -153,7 +153,7 @@ void open_shared_gym(){
 
     if (sharedGym == (void *) -1){
         sem_post(shared_gym_sem);
-        printf("Could not attached to the shared memory\n");
+        perror("Could not attached to the shared memory\n");
         return;
     }    
 
@@ -392,7 +392,7 @@ void gym_del(Gym *gym) {
 void close_shared_gym(){   
     sem_wait(shared_gym_sem);
     if (shmdt(sharedGym) == -1){
-        printf("Something happened trying to detach from shared memory\n");
+        perror("Something happened trying to detach from shared memory\n");
         return;
     }      
     sem_post(shared_gym_sem);
@@ -404,7 +404,7 @@ void destroy_shared_gym() {
     
     if (shmctl(sharedMemoryID,IPC_RMID,0) == -1){
         // It's already been closed by another process. Just ignore.
-        printf("Something went wrong with the shmctl function\n");
+        perror("Something went wrong with the shmctl function\n");
         return;
     }    
 
