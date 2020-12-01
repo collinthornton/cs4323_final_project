@@ -154,7 +154,7 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
 
 
     // WAIT FOR CLIENT TO ACKNOWLEDGE WORKOUT
-    while(client->workout.total_weight <= 0) {
+    while(client != NULL && client->workout.total_weight <= 0) {
         delay(2*gym->unit_time);
         update_gym(gym);
         trainer = trainer_list_find_pid(getpid(), gym->trainerList);
