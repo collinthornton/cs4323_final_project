@@ -141,7 +141,7 @@ void initRecordBook()
 
     pthread_mutex_init(&shared_mutex->mutex, &psharedm);
 
-    if (shmdt(shared_mutex) == -1){
+    if (shmdt(shared_mutex) == -1 && errno != EINVAL){
         perror("Something happened trying to detach from shared memory\n");
         return;
     }
@@ -176,7 +176,7 @@ void openRecordBook() {
 
 
 void closeRecordBook() {
-    if (shmdt(shared_mutex) == -1){
+    if (shmdt(shared_mutex) == -1 && errno != EINVAL) {
         perror("Something happened trying to detach from shared memory\n");
         return;
     }        

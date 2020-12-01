@@ -95,7 +95,7 @@ int init_shared_gym(int maxCouches, int numTrainers, bool boundaryCase, bool rea
     sharedGym->unit_time = UNIT_TIME;
     sharedGym->deadlock_victim = -1;
 
-    if (shmdt(sharedGym) == -1){
+    if (shmdt(sharedGym) == -1 && errno != EINVAL){
         sem_post(shared_gym_sem);
         perror("Something happened trying to detach from shared memory\n");
         return 1;
@@ -391,7 +391,7 @@ void gym_del(Gym *gym) {
 
 void close_shared_gym(){   
     sem_wait(shared_gym_sem);
-    if (shmdt(sharedGym) == -1){
+    if (shmdt(sharedGym) == -1 && errno != EINVAL) {
         perror("Something happened trying to detach from shared memory\n");
         return;
     }      
@@ -402,7 +402,7 @@ void close_shared_gym(){
 void destroy_shared_gym() {
     int sharedMemoryID = shmget(SHARED_KEY, sizeof(SharedGym), IPC_CREAT|0644);
     
-    if (shmctl(sharedMemoryID,IPC_RMID,0) == -1){
+    if (shmctl(sharedMemoryID,IPC_RMID,0) == -1) {
         // It's already been closed by another process. Just ignore.
         perror("Something went wrong with the shmctl function\n");
         return;
