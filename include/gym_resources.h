@@ -20,7 +20,7 @@
 
 typedef struct {
     sem_t couch_mutex;      //! MAY BE EASIER TO JUST MAKE A SEMAPHORE
-} Couch;
+} Couch;                    //TODO Remove this. It's unused.
 
 
 typedef enum {
@@ -35,6 +35,9 @@ typedef enum {
 } PlateIndex;
 
 
+/**
+ * @brief Organize the grip plates
+ */
 typedef struct {
     int num_plates[NUMBER_WEIGHTS];                    // Use PlateIndex as index for the array (will help w/ keeping track)
     float total_weight;                                // Summation of plate weights
@@ -43,10 +46,36 @@ typedef struct {
 
 
 
-// allocate on heap. Set params as NULL if not available
+/**
+ * @brief Allocate Weight struct on heap
+ * @param plate_array (int[NUMBER_WEIGHTS]) Array with each indice a number of grip plates of corresponding PlateIndice. Set to NULL if not yet known
+ * @return (Weight*) struct allocated on heap
+ */
 Weight* weight_init(int plate_array[NUMBER_WEIGHTS]);
+
+
+/**
+ * @brief free a Weight struct from the heap
+ * @param weight (Weight*) struct to be freed
+ * @return (int) return code. negative on failure
+ */
 int weight_del(Weight *weight);
+
+
+/**
+ * @brief Calculate the total weight represented by the num_plates array
+ * @param weight (Weight*) pointer to a Weight struct
+ * @return (float) total weight represented by that struct
+ */
 float weight_calc_total_weight(Weight *weight);
+
+
+/**
+ * @brief stringify a weight struct
+ * @param weight (Weight*) struct to be stringified
+ * @param buffer (char[]) buffer to store string
+ * @return (const char*) same as buffer
+ */
 const char* weight_to_string(Weight *weight, char buffer[]);
 
 #endif // GYM_RESOURCES_H

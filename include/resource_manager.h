@@ -33,12 +33,35 @@ typedef struct{
 //  USER FUNCTIONS
 //
 
+
+// FUNTIONS TO INITALIZE THE SEMAPHORE
+
+/**
+ * @brief Initialize the semaphore. Should only be ran on the parent process
+ * @return (int) return code. negative on error
+ */
 int init_resource_manager();
+
+/**
+ * @brief Open the semaphore on the current process.
+ * @return (int) return code. Negative on error
+ */
 int open_resource_manager();
+
+/**
+ * @brief Close the semaphore on the current process
+ */
 void close_resource_manager();
+
+/**
+ * @brief Desotry the semaphore. Should only be ran on the parent process.
+ */
 void destroy_resource_manager();
 
+
 // FUNCTIONS TO GET WEIGHT REQUESTS FROM FILE
+
+
 /**
  * @brief return the gym's total resources. must be deleted with weight_del()
  * @return (Weight*) Vector of total weights
@@ -80,9 +103,6 @@ int grantWeightRequest(pid_t pid);
  * @return (int) return code. negative on error
  */
 int releaseWeightAllocation(pid_t pid, Weight* weight);
-
-
-
 
 
 /**
@@ -148,21 +168,6 @@ int clearWeightFile();
 const char* weight_matrix_to_string(WeightMatrix *matrix, char buffer[]);
 
 
-
-//////////////////////////////
-//
-//  HELPER FUNCTIONS
-//
-
-
-/**
- * @brief Initailize a WeightMatrix on heap. All values NULL or 0
- * @return (WeightMatrix*) pointer to new matrix
- */
-static WeightMatrix* weight_matrix_init();
-
-
-
 /**
  * @brief Search a WeightMatrix for a pid
  * @param pid (pid_t) pid for which to search
@@ -171,6 +176,22 @@ static WeightMatrix* weight_matrix_init();
  * @return (WeightMatrixRow*) pointer to the row. NULL if not found
  */
 WeightMatrixRow* weight_matrix_search(pid_t pid, WeightMatrix *matrix, int *row_number);
+
+
+
+
+//////////////////////////////
+//
+//  HELPER FUNCTIONS
+//
+
+
+/**
+ * @brief Private function. Initailize a WeightMatrix on heap. All values NULL or 0
+ * @return (WeightMatrix*) pointer to new matrix
+ */
+static WeightMatrix* weight_matrix_init();
+
 
 
 /**
@@ -192,9 +213,25 @@ static int weight_matrix_add_req(pid_t pid, Weight *weight, WeightMatrix *matrix
  */
 static int weight_matrix_sub_req(pid_t pid, Weight *weight, WeightMatrix *matrix);
 
+
+/**
+ * @brief Private function. Not locked with semaphore. See getGymResources()
+ */
 static Weight* __getGymResources();
+
+/**
+ * @brief Privat function. Not locked with semaphore. See getAvalaibleWeights()
+ */
 static Weight* __getAvailableWeights();
+
+/**
+ * @brief Private function. Not locked with semaphore. See getWeightAllocation()
+ */
 static WeightMatrix* __getWeightAllocation();
+
+/**
+ * @brief Private function. Not locked with semaphore. See getWeightRequest()
+ */
 static WeightMatrix* __getWeightRequest();
 
 
@@ -207,7 +244,7 @@ static WeightMatrix* getWeightMatrixFromFile(unsigned int section);
 
 
 /**
- * @brief write a weight matrix to the input file. will delete the matrix
+ * @brief Private function. Not locked with semaphore. write a weight matrix to the input file. will delete the matrix
  * @param matrix (WeightMatrix*) matrix to be written
  * @param section (int) section number at which to write
  * @return (int) negative on failure
@@ -216,14 +253,14 @@ static int writeWeightMatrixToFile(WeightMatrix *matrix, int section);
 
 
 /**
- * @brief get a weight from the input file
+ * @brief Private function. Not locked with semaphore. get a weight from the input file
  * @param section (unsigned int) section number from which to read
  * @return (Weight*) allocation on heap
  */
 static Weight* getWeightFromFile(unsigned int section);
 
 /**
- * @brief remove all whitespace from a string
+ * @brief Private function. remove all whitespace from a string
  * @param str (char*) input string. will be changed
  * @return (const char*) output string. same as str
  */

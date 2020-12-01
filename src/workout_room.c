@@ -22,17 +22,24 @@
 #include "recordbook.h"
 
 
+
+// Set by each trainer to track the starting weight. Is randomized. Weight grows from here.
 static int init_weight;
-
-
 
 
 
 //////////////////////////////
 //
-// Client perform workout
+// Event functions
 //
 
+
+/**
+ * @brief Execute the workout event on client process.
+ * @param gym (Gym*) gym struct used for IPC
+ * @param client (Client*) client in workout event
+ * @return (int) return code. negative on error
+ */
 int client_workout_event(Gym *gym, Client *client) {
     if(gym == NULL || client == NULL) {
         perror("client_workout_event invalid_argument");
@@ -114,11 +121,14 @@ int client_workout_event(Gym *gym, Client *client) {
 }
 
 
-//////////////////////////////
-//
-// Trainer perform workout
-//
 
+
+/**
+ * @brief Execute the workout event on trainer proccess.
+ * @param gym (Gym*) gym struct used for IPC
+ * @param trianer (Trainer*) trainer in workout event
+ * @return (int) return code. negative on error
+ */
 int trainer_workout_event(Gym *gym, Trainer *trainer) {
     if(gym == NULL || trainer == NULL) {
         perror("trainer_workout_event invalid_argument");
@@ -231,6 +241,13 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
 // Helper functions
 //
 
+
+/**
+ * @brief Choose total weight and total sets. Place in IPC
+ * @param gym (Gym*) gym struct for IPC
+ * @param trainer (Trainer*) trainer in event
+ * @return (int) return code. negative on error
+ */
 int trainer_set_workout(Gym *gym, Trainer *trainer) {
     // TODO This will need to setup to cause deadlock
 
@@ -255,7 +272,13 @@ int trainer_set_workout(Gym *gym, Trainer *trainer) {
 }
 
 
-
+/**
+ * @brief Get total weight and total sets from trianer over shared memory
+ * @param gym (Gym*) gym struct for IPC
+ * @param client (Client*) client in event
+ * @param trainer (Trainer*) trainer that's paired with client
+ * @param first_time (bool) flag to toggle whether the trainer can change the total number of sets
+ */
 int client_get_workout(Gym *gym, Client *client, Trainer *trainer, bool first_time) {
     // WAIT FOR THE TRAINER TO SEND US A WORKOUT
 
@@ -287,14 +310,15 @@ int client_get_workout(Gym *gym, Client *client, Trainer *trainer, bool first_ti
     update_shared_gym(gym);
     trainer = trainer_list_find_client(getpid(), gym->trainerList);
 
-
-    //if(gym->realistic)
-    //    printf("client %d updated workout to weight %d from trainer %d\r\n", getpid(), client->workout.total_weight, trainer->pid);
-
     return 0;
 }
 
 
+/**
+ * @brief Get grip plates from the resource manager
+ * @param gym (Gym*) gym struct for IPC
+ * @param client (Client*) client in event
+ */
 int client_get_weights(Gym *gym, Client *client) {
     // FIGURE OUT HOW MANY PLATES WE NEED WHILE UTILIZING THE SMALLEST NUMBER
     int weight_left = client->workout.total_weight;
@@ -302,6 +326,8 @@ int client_get_weights(Gym *gym, Client *client) {
     int weights[NUMBER_WEIGHTS];
     
     if(gym->realistic) {
+        // If we're running the realistic algorithm, pick an optimal number of weights with restrictions
+
         weights[FORTY_FIVE] = 2*(weight_left/45/2);
         weights[FORTY_FIVE] = (weights[FORTY_FIVE] > 4) ? 4 : weights[FORTY_FIVE];
         weight_left -= 45*weights[FORTY_FIVE];
@@ -341,6 +367,8 @@ int client_get_weights(Gym *gym, Client *client) {
         }
     }
     else {
+        // Pick nonrealistic weights to cause deadlock. Ignore the trainer's recommended total weight
+
         #ifdef VERBOSE
         printf("Client %d has %d sets left\r\n", getpid(), client->workout.sets_left);
         #endif // VERBOSE
@@ -393,7 +421,6 @@ int client_get_weights(Gym *gym, Client *client) {
     #ifdef VERBOSE
     char buffer[BUFFER_SIZE] = "\0";
     weight_to_string(&client->workout.in_use, buffer);
-    
     
     printf("client %d in use\r\n%s\r\n", getpid(), buffer);
     weight_to_string(request, buffer);
@@ -449,16 +476,18 @@ int client_get_weights(Gym *gym, Client *client) {
     } while(success == false);
 
 
-
-    //printf("client %d got weight allocation\r\n", getpid());
-
     vector_add(client->workout.in_use.num_plates, req.num_plates, NUMBER_WEIGHTS);
-    //client->workout.in_use = req;
     return 0;
 }
 
 
-
+/**
+ * @brief Make a weight request from the resource manaegr
+ * @param gym (Gym*) gym struct for IPC
+ * @param client (Client*) client in event
+ * @param weight (Weight*) request
+ * @return bool true on succes. else false
+ */
 bool client_request_weight_allocation(Gym *gym, Client *client, Weight *weight) {
     int ret;
     while((ret = grantWeightRequest(getpid())) < 0 && gym->deadlock_victim != getpid()) {
@@ -472,6 +501,10 @@ bool client_request_weight_allocation(Gym *gym, Client *client, Weight *weight) 
     return (ret == 0) ? true : false;
 }
 
+
+/**
+ * @brief Delay for a bit and set flags as the client lifts weights
+ */
 void client_lift_weights(Gym *gym, Client *client) {
     delay(2*gym->unit_time);
     --client->workout.sets_left;

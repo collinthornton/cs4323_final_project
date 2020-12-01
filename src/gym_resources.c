@@ -22,6 +22,11 @@
 //
 
 
+/**
+ * @brief Allocate Weight struct on heap
+ * @param plate_array (int[NUMBER_WEIGHTS]) Array with each indice a number of grip plates of corresponding PlateIndice. Set to NULL if not yet known
+ * @return (Weight*) struct allocated on heap
+ */
 Weight* weight_init(int plate_array[8]) {
     Weight* weight = malloc(sizeof(Weight));
 
@@ -43,6 +48,12 @@ Weight* weight_init(int plate_array[8]) {
     return weight;
 }
 
+
+/**
+ * @brief free a Weight struct from the heap
+ * @param weight (Weight*) struct to be freed
+ * @return (int) return code. negative on failure
+ */
 int weight_del(Weight *weight) {
     if(weight == NULL) return 1;
     free(weight);
@@ -52,6 +63,11 @@ int weight_del(Weight *weight) {
 }
 
 
+/**
+ * @brief Calculate the total weight represented by the num_plates array
+ * @param weight (Weight*) pointer to a Weight struct
+ * @return (float) total weight represented by that struct
+ */
 float weight_calc_total_weight(Weight *weight) {
     if(weight == NULL) return 0;
 
@@ -88,6 +104,13 @@ float weight_calc_total_weight(Weight *weight) {
     return total_weight;
 }
 
+
+/**
+ * @brief stringify a weight struct
+ * @param weight (Weight*) struct to be stringified
+ * @param buffer (char[]) buffer to store string
+ * @return (const char*) same as buffer
+ */
 const char* weight_to_string(Weight *weight, char buffer[]) {
     buffer[0] = '\0';
 

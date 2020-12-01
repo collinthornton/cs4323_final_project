@@ -3,6 +3,8 @@
         "/opt/ros/melodic/lib/python2.7/dist-packages"
     ],
     "files.associations": {
-        "thread": "c"
+        "thread": "c",
+        "mutex": "c",
+        "condition_variable": "c"
     }
 }
