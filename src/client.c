@@ -22,6 +22,12 @@
 #include "resource_manager.h"
 
 
+
+static const char CLIENT_ARRIVING_SEM_NAME[] = "/sem_client_arriving";
+static const char CLIENT_WAITING_SEM_NAME[] = "/sem_client_waiting";
+
+
+
 //////////////////////////////
 //
 // Client process functions
@@ -45,6 +51,7 @@ pid_t client_start() {
 
 int client_proc_state_machine() {
 
+    open_client_sem();
     open_resource_manager();
     
     int pid = getpid();
@@ -59,12 +66,13 @@ int client_proc_state_machine() {
     }
 
 
-    Client *client = client_init(getpid(), WAITING, NULL, NULL, NULL);
+    Client *client = client_init(getpid(), ARRIVING, NULL, NULL, NULL);
     Trainer *trainer;
 
     char buffer[BUFFER_SIZE] = "\0";
 
     bool shutdown = false;
+    bool has_couch = false;
 
 
     while(!shutdown) {
@@ -72,82 +80,144 @@ int client_proc_state_machine() {
 
         switch(client->state) {
             case ARRIVING:
+                // ADD SEMAPHORE
+
+                if(gym->boundary_case) {
+                    sem_wait(client_arriving_sem);
+                }
+
+                printf("CLIENT %d ARRIVING\r\n", pid);
+
                 client_list_add_client(client, gym->arrivingList);
                 update_shared_gym(gym);
 
+                
+                if(gym->boundary_case) {
+                    // WAIT FOR ALL TRAINERS TO FINISH TRAVELLING
 
-                client->state = WAITING;
+                    trainer = trainer_list_find_state(TRAVELLING, gym->trainerList);
+
+                    while(trainer != NULL) {
+                        delay(1*gym->unit_time);
+                        update_gym(gym);
+                        trainer = trainer_list_find_state(TRAVELLING, gym->trainerList);
+                    }
+                }
+
+                // NOW FIND TRAINER ON PHONE
+                update_gym(gym);
+
+                trainer = trainer_list_find_phone(gym->trainerList);
+                while(trainer != NULL && trainer->client_pid > 0) {
+                    update_gym(gym);
+                    trainer = trainer_list_find_phone(gym->trainerList);
+                    delay(1*gym->unit_time);
+                }
+
+                if(trainer != NULL && trainer->client_pid <= 0) {
+                    client->current_trainer = *trainer;
+                    update_shared_gym(gym);
+
+                    while(trainer != NULL && trainer->client_pid != getpid()) {
+                        // wait for the trainer to also claim us
+
+                        update_gym(gym);
+                        trainer = trainer_list_find_pid(client->current_trainer.pid, gym->trainerList);
+                        delay(1*gym->unit_time);
+                    }   
+                    client->state = TRAINING;
+                } 
+                else {
+                    client->state = MOVING;
+                }
+                
                 delay(2*gym->unit_time); 
                 client_list_rem_client(client, gym->arrivingList);
 
-                //client_arriving_event(gym, client);               
+                // CLOSE SEMAPHORE
+                if(gym->boundary_case) {
+                    sem_post(client_arriving_sem);
+                }
+
                 break;
 
             case WAITING:
+                // ADD SEMAPHORE
+                if(gym->boundary_case)
+                    sem_wait(client_waiting_sem);
+
+                if(gym->waitingList->len >= gym->maxCouches && !has_couch) {
+                    client->state = LEAVING; 
+
+                    // RELEASE SEMAPHORE
+                    if(gym->boundary_case)
+                        sem_post(client_waiting_sem);
+
+                    printf("CLIENT %d WAITING ROOM FULL WITH %d COUCHES OCCUPIED. LEAVING\r\n", pid, gym->waitingList->len);
+
+                    break;
+                }
+
+                if(!gym->boundary_case)
+                    delay(1*gym->unit_time);
+
                 client_list_add_client(client, gym->waitingList);
                 update_shared_gym(gym);
 
-                #ifdef VERBOSE
-                printf("client %d WAITING\r\n", getpid());
-                #endif // VERBOSE
+
+                if(!has_couch)
+                    printf("CLIENT %d WAITING. %d OF %d COUCHES TAKEN\r\n", getpid(), gym->waitingList->len, gym->maxCouches);
+
+                has_couch = true;
+
 
                 // Check if a trainer has picked us up
                 trainer = trainer_list_find_client(getpid(), gym->trainerList);
                 if(trainer != NULL) {
+                    has_couch = false;
                     client->state = TRAINING;
                     client_list_rem_client(client, gym->waitingList);
                     copy_trainer(&client->current_trainer, trainer);
                 }
 
-                //trainer_list_to_string(gym->trainerList, buffer);
-                //printf("client %d -> trainer list\r\n%s\r\n", getpid(), buffer);
-
                 delay(1*gym->unit_time);
 
-                //client->state = LEAVING;
-                //update_shared_gym(gym);
-                //Now check if there is room on the couches
-
-                // client_waiting_event(gym, client);
-                
-                /*if(gym->waitingList->len < gym->maxCouches){
-                    //Another semaphore areas
-                    client->state = WAITING;
-                    client_list_add_client(client, gym->waitingList);
-                    //gym->maxCouches++;
-                    //End the semaphore
-                } else {
-                    //No couches available, no trainers available, time to leave
-                    client->state = LEAVING;
-                } */
+                // RELEASE 
+                if(gym->boundary_case)
+                    sem_post(client_waiting_sem);
                 break;
 
             case MOVING:
-                    //This is the "traveling" piece, also a semaphore area
-                    //delay(2*gym->unit_time);
-                    //End the semaphore
+                    //This is the "traveling" piece,
+
+                    printf("CLIENT %d MOVING\r\n", pid);
+
+                    delay(6*gym->unit_time);
                     client->state = WAITING;
-                    update_shared_gym(gym);
                 break;
 
             case TRAINING:
+                printf("CLIENT %d TRAINING\r\n", pid);
+
                 client_list_add_client(client, gym->workoutList);
                 update_shared_gym(gym);
 
-                printf("client %d TRAINING\r\n", pid);
+                delay(2*gym->unit_time);
+
                 client_workout_event(gym, client);
                 client->state = LEAVING;
 
                 break;
 
             case LEAVING:
-                
-                printf("client %d leaving\r\n", pid);
+                printf("CLIENT %d LEAVING\r\n", pid);
+
                 shutdown = true;
                 break;
 
             default:
                 printf("CLIENT %d UNKOWN STATE \r\n", getpid());
+
                 shutdown = true;
         }
 
@@ -172,6 +242,7 @@ int client_proc_state_machine() {
     close_shared_gym();
     close_resource_manager();
     close_trainer_sem();
+    close_client_sem();
 
     printf("Client %d exiting\r\n", getpid());
 
@@ -417,7 +488,63 @@ Client* client_list_find_pid(pid_t pid, ClientList *list) {
     return NULL;
 }
 
+Client* client_list_find_trainer(pid_t pid, ClientList *list) {
+    if(list == NULL) return NULL;
 
+    ClientNode *tmp = list->HEAD;
+    while(tmp != NULL) {
+        if(tmp->node->current_trainer.pid == pid) return tmp->node;
+        tmp = tmp->next;
+    }
+    return NULL;    
+}
+
+
+
+
+
+int init_client_sem() {
+    sem_unlink(CLIENT_ARRIVING_SEM_NAME);
+    client_arriving_sem = sem_open(CLIENT_ARRIVING_SEM_NAME, O_CREAT, 0644, 1);
+    if(client_arriving_sem == SEM_FAILED) {
+        perror("client_sem_init failed to open arriving sem");
+        exit(1);
+    }
+
+    sem_unlink(CLIENT_WAITING_SEM_NAME);
+    client_waiting_sem = sem_open(CLIENT_WAITING_SEM_NAME, O_CREAT, 0644, 1);
+    if(client_waiting_sem == SEM_FAILED) {
+        perror("client_sem_init failed to open waiting sem");
+        exit(1);
+    }
+}
+
+int open_client_sem() {
+    client_arriving_sem = sem_open(CLIENT_ARRIVING_SEM_NAME, O_CREAT, 0644, 1);
+    if(client_arriving_sem == SEM_FAILED) {
+        perror("client_sem_init failed to open arriving sem");
+        exit(1);
+    }
+
+    client_waiting_sem = sem_open(CLIENT_WAITING_SEM_NAME, O_CREAT, 0644, 1);
+    if(client_waiting_sem == SEM_FAILED) {
+        perror("client_sem_init failed to open waiting sem");
+        exit(1);
+    }
+    return 0;
+}
+
+void close_client_sem() {
+    sem_close(client_arriving_sem);
+    sem_close(client_waiting_sem);
+    return;
+}
+
+void destroy_client_sem() {
+    sem_unlink(CLIENT_ARRIVING_SEM_NAME);
+    sem_unlink(CLIENT_WAITING_SEM_NAME);
+    return;
+}
 
 //////////////////////////////
 //

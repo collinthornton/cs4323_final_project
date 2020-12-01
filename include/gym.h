@@ -35,6 +35,7 @@ typedef struct {
     int num_trainers;
     int unit_time; // milliseconds
 
+    bool boundary_case;
     bool realistic;
     bool fix_deadlock;
     bool detect_deadlock;
@@ -52,6 +53,7 @@ typedef struct {
     int maxCouches;
     int num_trainers;
 
+    bool boundary_case;
     bool realistic;
     bool fix_deadlock;
     bool detect_deadlock;
@@ -62,7 +64,7 @@ typedef struct {
 } Gym;
 
 void open_gym(int numberTrainers, int numberCouches, int numberClients, int useSemaphors);
-int init_shared_gym(int maxCouches, int numTrainers, bool realistic, bool detectDeadlock, bool fixDeadlock, bool trainerLog);
+int init_shared_gym(int maxCouches, int numTrainers, bool boundary_case, bool realistic, bool detectDeadlock, bool fixDeadlock, bool trainerLog);
 Gym* gym_init();
 
 Gym* update_gym(Gym *gym);

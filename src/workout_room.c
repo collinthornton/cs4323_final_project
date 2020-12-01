@@ -10,6 +10,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <math.h>
 
@@ -18,6 +19,7 @@
 #include "resource_manager.h"
 #include "workout.h"
 #include "vector.h"
+#include "recordbook.h"
 
 
 static int init_weight;
@@ -130,10 +132,13 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
     update_gym(gym);
 
     Client *client = client_list_find_pid(trainer->client_pid, gym->workoutList);
-    if(client == NULL) {
-        perror("trainer_workout_event client not found");
-        return -1;
+    
+    while(client == NULL) {
+        delay(1*gym->unit_time);
+        update_gym(gym);
+        client = client_list_find_pid(trainer->client_pid, gym->workoutList);
     }
+
 
     // CREATE THE WORKOUT AND SEND TO CLIENT
     init_weight = rand();
@@ -149,6 +154,8 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
         client = client_list_find_pid(trainer->client_pid, gym->workoutList);
     }       
 
+    int total_weight = client->workout.total_weight;
+
     if(!gym->realistic)
         printf("trainer %d picked workout for client %d: num_sets %d\r\n", getpid(), trainer->client_pid, trainer->workout.total_sets);
 
@@ -162,31 +169,43 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
         printf("Trainer %d waiting for client to finish set\r\n", getpid());
         #endif // VERBOSE
 
-        int old_weight = trainer->workout.total_weight;
-
         trainer_set_workout(gym, trainer);
         update_shared_gym(gym);
         update_gym(gym);
         trainer = trainer_list_find_pid(getpid(), gym->trainerList);
         client = client_list_find_pid(trainer->client_pid, gym->workoutList);
 
-        //printf("trainer %d picked %d weight for client %d\r\n", getpid(), trainer->workout.total_weight, trainer->client_pid);
-
         // WAIT FOR CLIENT TO GRAB WEIGHTS
-        while(client != NULL && client->workout.total_weight == old_weight) {
+        while(client != NULL && client->workout.total_weight > 0) {
             delay(2*gym->unit_time);
             update_gym(gym);
             trainer = trainer_list_find_pid(getpid(), gym->trainerList);
             client = client_list_find_pid(trainer->client_pid, gym->workoutList);
-            //printf("trainer %d stuck. client weight %d\r\n", getpid(), client->workout.total_weight);
         }
+
+        if(client != NULL)
+            total_weight += client->workout.total_weight;
+
         delay(2*gym->unit_time);
+
+        if(gym->realistic && client != NULL)
+            printf("trainer %d picked %d weight for client %d\r\n", getpid(), trainer->workout.total_weight, trainer->client_pid);
     }
 
     trainer->workout.sets_left = -1;
     trainer->workout.total_sets = -1;
     trainer->workout.total_weight = -1;
 
+
+    if(gym->trainer_log) {
+        Emp record_entry;
+        record_entry.id = trainer->client_pid;
+        record_entry.weight = total_weight;
+
+        sprintf(record_entry.name, "client %d", trainer->client_pid);
+
+        addToRecordBook(&record_entry);
+    }
 
     printf("trainer %d client finished workout out\r\n", getpid());
 
@@ -233,6 +252,8 @@ int client_get_workout(Gym *gym, Client *client, Trainer *trainer, bool first_ti
     update_gym(gym);
     trainer = trainer_list_find_client(getpid(), gym->trainerList);
 
+    client->workout.total_weight = -1;
+
     while(trainer->workout.total_weight <= 0) {
         #ifdef VERBOSE
         printf("client %d waiting for workout\r\n", getpid());
@@ -249,6 +270,7 @@ int client_get_workout(Gym *gym, Client *client, Trainer *trainer, bool first_ti
         client->workout.total_sets = trainer->workout.total_sets;
         client->workout.sets_left = client->workout.total_sets;
     }
+
     client->workout.total_weight = trainer->workout.total_weight;
 
     if(gym->realistic)

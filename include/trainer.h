@@ -74,6 +74,7 @@ int trainer_list_rem_trainer(Trainer *trainer, TrainerList *list);
 Trainer* trainer_list_find_client(pid_t client_pid, TrainerList *list);
 Trainer* trainer_list_find_available(TrainerList *list);
 Trainer* trainer_list_find_phone(TrainerList *list);
+Trainer* trainer_list_find_state(TrainerState state, TrainerList *list);
 Trainer* trainer_list_find_pid(pid_t pid, TrainerList *list);
 
 const char* trainer_list_to_string(TrainerList *list, char buffer[]);

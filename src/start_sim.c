@@ -17,9 +17,9 @@
 
 #include "start_sim.h"
 
-#define NUM_CLIENTS MAX_CLIENTS
+#define NUM_CLIENTS 2 //MAX_CLIENTS
 
-void start_sim(const int num_trainers, const int num_couches, const bool realistic, const bool detect_deadlock, const bool fix_deadlock, const bool trainer_log) {
+void start_sim(const int num_trainers, const int num_couches, const bool boundary_case, const bool realistic, const bool detect_deadlock, const bool fix_deadlock, const bool trainer_log) {
 
     if(num_trainers < 3 || num_trainers > MAX_TRAINERS) {
         printf("Number of trainers must be between %d and %d\r\n\r\n", MIN_TRAINERS, MAX_TRAINERS);
@@ -40,13 +40,16 @@ void start_sim(const int num_trainers, const int num_couches, const bool realist
     // Initalized semaphores and shared memory
     //
 
-    if(init_shared_gym(num_couches, num_trainers, realistic, detect_deadlock, fix_deadlock, trainer_log) == 1) exit(1);
+    if(init_shared_gym(num_couches, num_trainers, boundary_case, realistic, detect_deadlock, fix_deadlock, trainer_log) == 1) exit(1);
     init_resource_manager();
     init_trainer_sem();
+    init_client_sem();
+    initRecordBook(NULL);
 
     sem_close(shared_gym_sem);
     close_resource_manager();
     close_trainer_sem();
+    close_client_sem();
 
     //TODO Get rid of this if unneeded
     //open_gym(3,3,5,0);
@@ -58,15 +61,21 @@ void start_sim(const int num_trainers, const int num_couches, const bool realist
 
     printf("parent -> pid %d\r\n", getpid());
 
-
-    printf("parent -> spawning %d clients\r\n", NUM_CLIENTS);
-    pid_t client_pids[NUM_CLIENTS];
-    for(int i=0; i<NUM_CLIENTS; ++i) client_pids[i] = client_start();
-
     printf("parent -> spawning %d trainers\r\n", num_trainers);
     pid_t trainer_pids[num_trainers];
-    
     for(int i=0; i<num_trainers; ++i) trainer_pids[i] = trainer_start();
+
+
+    //if(boundary_case)
+    //    sleep(3);
+
+
+    int num_clients = num_couches - 1;
+    printf("parent -> spawning %d clients\r\n", num_clients);
+    pid_t client_pids[num_clients];
+    for(int i=0; i<num_clients; ++i) client_pids[i] = client_start();
+
+
     //////////////////////////
     //
     // Setup shared memory
@@ -75,9 +84,31 @@ void start_sim(const int num_trainers, const int num_couches, const bool realist
     open_shared_gym();   
     open_resource_manager();
     open_trainer_sem(); 
+    open_client_sem();
     
     Gym *gym = gym_init();
     update_gym(gym);   
+
+
+    //if(!boundary_case) {
+    delay(2*gym->unit_time);
+
+    close_shared_gym();
+    close_resource_manager();
+    close_trainer_sem();
+    close_client_sem();
+    gym_del(gym);
+
+    client_start();
+    client_start();
+
+    open_shared_gym();
+    open_resource_manager();
+    open_trainer_sem();
+    open_client_sem();
+    gym = gym_init();
+    update_gym(gym);
+   // }
 
 
     //////////////////////////
@@ -87,13 +118,47 @@ void start_sim(const int num_trainers, const int num_couches, const bool realist
     // 
 
     printf("gym unit time %d\r\n", gym->unit_time);
-    delay(2*gym->unit_time);
+
+    //if(!gym->boundary_case)
+    delay(15*gym->unit_time);
+    
     update_gym(gym);
 
+    int print_delay = 0;
 
-    if(gym->detect_deadlock || gym->fix_deadlock) {
-        while(gym->trainerList->len > 0) {
+    bool first_time = true;
 
+    while(gym->trainerList->len > 0) {
+
+        if(!gym->boundary_case && first_time) {
+            // CAUSE PROBLEMS
+
+            close_shared_gym();
+            close_resource_manager();
+            close_trainer_sem();
+            close_client_sem();
+            gym_del(gym);
+
+            // PUT 2 CLIENTS IN THE WAITING ROOM
+            //for(int i=0; i<num_trainers+2; ++i) client_start();
+            //first_time = false;
+
+            open_shared_gym();
+            open_resource_manager();
+            open_trainer_sem();
+            open_client_sem();
+            gym = gym_init();
+            update_gym(gym);
+        }
+
+
+        if(print_delay % 5 == 0) {
+            printf("\r\nCOUCHES TAKEN: %d of %d\r\n", gym->waitingList->len, gym->maxCouches);
+        }
+
+
+        if((gym->detect_deadlock || gym->fix_deadlock) && print_delay % 5 == 0) {
+    
             pid_t deadlock_array[MAX_CLIENTS];
             int num_deadlocked = checkForDeadlock(deadlock_array);
 
@@ -101,7 +166,7 @@ void start_sim(const int num_trainers, const int num_couches, const bool realist
 
             for(int i=0; i<num_deadlocked; ++i) {
                 printf("%d ", deadlock_array[i]);
-            }
+            }    
 
             if(num_deadlocked == 0) {
                 printf("NO DEADLOCKED PROCESSES\r\n\r\n");
@@ -124,12 +189,15 @@ void start_sim(const int num_trainers, const int num_couches, const bool realist
                     printf("parent -> chose client %d as deadlock victim\r\n\r\n", deadlock_victim);
                 }
             }
-
-            update_shared_gym(gym);
-            delay(5*gym->unit_time);
-            update_gym(gym);
         }
+
+        update_shared_gym(gym);
+        delay(1*gym->unit_time);
+        update_gym(gym);
+
+        ++print_delay;
     }
+
 
 
     // test_workout_room();
@@ -162,4 +230,7 @@ void start_sim(const int num_trainers, const int num_couches, const bool realist
 
     close_trainer_sem();
     destroy_trainer_sem();
+
+    close_client_sem();
+    destroy_client_sem();
 }

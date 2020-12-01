@@ -64,7 +64,7 @@ int trainer_proc_state_machine() {
         return -1;
     }
 
-    Trainer *trainer = trainer_init(pid, -1, FREE);
+    Trainer *trainer = trainer_init(pid, -1, TRAVELLING);
     Client *client;
 
     trainer_list_add_trainer(trainer, gym->trainerList);
@@ -75,7 +75,7 @@ int trainer_proc_state_machine() {
 
     bool shutdown = false;
 
-    const int MAX_WAIT = 5;
+    const int MAX_WAIT = 30;
     int num_wait = 0;
 
     while(!shutdown) {
@@ -83,7 +83,8 @@ int trainer_proc_state_machine() {
 
         switch(trainer->state) {
             case FREE:
-                printf("trainer %d waiting for client\r\n", pid);
+                printf("TRAINER %d FREE %d of %d CLIENTS IN WAITING ROOM\r\n", pid, gym->waitingList->len, gym->maxCouches);
+
                 sem_wait(trainer_sem);
                 int val;
                 sem_getvalue(trainer_sem, &val);
@@ -101,13 +102,10 @@ int trainer_proc_state_machine() {
                     if(node != NULL) {
                         trainer->state = WITH_CLIENT;
                         trainer->client_pid = node->node->pid;
-                        printf("trainer found client %d\r\n", trainer->client_pid);
-                        num_wait = 0;
                     }
                 }
                 else {
-                    ++num_wait;
-                    if(num_wait == MAX_WAIT) shutdown = true;
+                    trainer->state = ON_PHONE;
                 }
 
                 update_shared_gym(gym);
@@ -118,20 +116,37 @@ int trainer_proc_state_machine() {
                 break;
 
             case ON_PHONE:
+                // CHECK IF WE'VE BEEN CLAIMED BY A CLIENT
+                printf("TRAINER %d ON PHONE\r\n", pid);
 
+                client = client_list_find_trainer(getpid(), gym->arrivingList);
+                
+                if(client != NULL) {
+                    trainer->client_pid = client->pid;
+                    trainer->state = WITH_CLIENT;
+                    update_shared_gym(gym);
+                    num_wait = 0;
+                }
+                else {
+                    ++num_wait;
+                    if(num_wait == MAX_WAIT) shutdown = true;
+                }
+
+                delay(2*gym->unit_time);
 
                 break;
 
             case TRAVELLING:
-                printf("trainer %d -> TRAVELLING\r\n", pid);
+                printf("TRAINER %d TRAVELLING\r\n", pid);
+                trainer->client_pid = -1;
                 
-                delay(1*gym->unit_time);
+                delay(3*gym->unit_time);
                 trainer->state = FREE;
 
                 break;
 
             case WITH_CLIENT:
-                printf("trainer %d -> WITH_CLIENT %d\r\n", pid, trainer->client_pid);
+                printf("TRAINER %d WITH_CLIENT %d\r\n", pid, trainer->client_pid);
                 delay(2*gym->unit_time);
                 trainer_workout_event(gym, trainer);
                 trainer->state = TRAVELLING;
@@ -385,25 +400,22 @@ Trainer* trainer_list_find_client(pid_t client_pid, TrainerList *list) {
 }
 
 Trainer* trainer_list_find_phone(TrainerList *list) {
-    if(list == NULL) return NULL;
-
-    TrainerNode *tmp = list->HEAD;
-    while(tmp != NULL) {
-        if(tmp->node->state == ON_PHONE) return tmp->node;
-        tmp = tmp->next;
-    }
-    return NULL;
+    return trainer_list_find_state(ON_PHONE, list);
 }
 
 Trainer* trainer_list_find_available(TrainerList *list) {
+    return trainer_list_find_state(FREE, list);
+}
+
+Trainer* trainer_list_find_state(TrainerState state, TrainerList *list) {
     if(list == NULL) return NULL;
 
     TrainerNode *tmp = list->HEAD;
     while(tmp != NULL) {
-        if(tmp->node->state == FREE) return tmp->node;
+        if(tmp->node->state == state) return tmp->node;
         tmp = tmp->next;
     }
-    return NULL;
+    return NULL;    
 }
 
 Trainer* trainer_list_find_pid(pid_t pid, TrainerList *list) {

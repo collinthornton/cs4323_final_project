@@ -18,6 +18,9 @@
 
 #define MAX_CLIENTS 10
 
+sem_t *client_arriving_sem;
+sem_t *client_waiting_sem;
+
 typedef enum {
     ARRIVING,
     WAITING,
@@ -50,6 +53,12 @@ typedef struct {
 
 // EACH CLIENT SHOULD BE ON A DIFFERENT THREAD
 // - should maintain a finite state machine
+int init_client_sem();
+int open_client_sem();
+void close_client_sem();
+void destroy_client_sem();
+
+
 pid_t client_start();
 int client_proc_state_machine();
 
@@ -71,6 +80,7 @@ const char* client_list_to_string(ClientList *list, char buffer[]);
 
 ClientNode* client_list_srch(Client *client, ClientList *list);
 Client* client_list_find_pid(pid_t pid, ClientList *list);
+Client* client_list_find_trainer(pid_t pid, ClientList *list);
 
 
 void test_client_list();

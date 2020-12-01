@@ -41,5 +41,5 @@ int main(int argc, char **argv) {
     }
 
 
-    start_sim(num_trainers, num_couches, false, true, true, true);
+    start_sim(num_trainers, num_couches, true, true, true, true, true);
 }

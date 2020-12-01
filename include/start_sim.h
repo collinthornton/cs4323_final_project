@@ -16,9 +16,11 @@
 #include "entrance.h"
 #include "workout_room.h"
 #include "deadlock.h"
+#include "recordbook.h"
 
 
-void start_sim(int num_trainers, int num_couches, bool realistic, bool detect_deadlock, bool fix_deadlock, bool trainer_log);
+void start_sim(int num_trainers, int num_couches, const bool boundary_case, const bool realistic, 
+    const bool detect_deadlock, const bool fix_deadlock, const bool trainer_log);
 
 
 

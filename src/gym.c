@@ -33,7 +33,7 @@ static SharedGym *sharedGym;
 static char SHARED_GYM_SEM_NAME[] = "/sem_shmem_gym";
 
 
-int init_shared_gym(int maxCouches, int numTrainers, bool realistic, bool detectDeadlock, bool fixDeadlock, bool trainerLog){
+int init_shared_gym(int maxCouches, int numTrainers, bool boundaryCase, bool realistic, bool detectDeadlock, bool fixDeadlock, bool trainerLog){
     sem_unlink(SHARED_GYM_SEM_NAME);
     shared_gym_sem = sem_open(SHARED_GYM_SEM_NAME, O_CREAT, 0644, 1);
     if(shared_gym_sem == SEM_FAILED) {
@@ -47,9 +47,15 @@ int init_shared_gym(int maxCouches, int numTrainers, bool realistic, bool detect
     sharedMemoryID = shmget(SHARED_KEY, sizeof(SharedGym), IPC_CREAT|0644);
 
     if (sharedMemoryID == -1){
-        //something went wrong here
-        perror("Something went wrong allocating the shared memory space");
-        return 1;
+        // FAILSAFE FOR MISHANDLED SHARED MEMORY DEALLOCATION
+
+        system("ipcrm -M 4660");
+        sharedMemoryID = shmget(SHARED_KEY, sizeof(SharedGym), IPC_CREAT|0644);
+
+        if(sharedMemoryID == -1) {
+            perror("Something went wrong allocating the shared memory space");
+            return 1;
+        }
     }
 
     // TAKE THE SEMAPHORE
@@ -78,6 +84,7 @@ int init_shared_gym(int maxCouches, int numTrainers, bool realistic, bool detect
 
     sharedGym->maxCouches = maxCouches;
     sharedGym->num_trainers = numTrainers;
+    sharedGym->boundary_case = boundaryCase;
     sharedGym->realistic = realistic;
     sharedGym->fix_deadlock = fixDeadlock;
     sharedGym->detect_deadlock = detectDeadlock;
@@ -105,9 +112,10 @@ Gym* gym_init() {
     gym->trainerList = trainer_list_init();
     gym->unit_time = UNIT_TIME;
     gym->num_trainers = 0;
-    gym->realistic = false;
-    gym->detect_deadlock = false;
-    gym->fix_deadlock = false;
+    gym->boundary_case = true;
+    gym->realistic = true;
+    gym->detect_deadlock = true;
+    gym->fix_deadlock = true;
     gym->trainer_log = false;
     gym->maxCouches = 0;
     gym->deadlock_victim = -1;
@@ -116,6 +124,7 @@ Gym* gym_init() {
 }
 
 void open_shared_gym(){
+
     shared_gym_sem = sem_open(SHARED_GYM_SEM_NAME, O_CREAT, 0644, 1);
     if(shared_gym_sem == SEM_FAILED) {
         perror("init_shared_gym sem_failed_to_open");
@@ -173,11 +182,6 @@ void update_shared_gym(Gym *gym) {
     bool is_client = (client == NULL) ? false : true;
 
     sem_wait(shared_gym_sem);
-
-    //! We shouldn't change these
-    //sharedGym->unit_time = gym->unit_time;
-    //sharedGym->maxCouches = gym->maxCouches;
-
 
     // Only the parent can set a victim for deadlock rollback
     if(!in_list)  sharedGym->deadlock_victim = gym->deadlock_victim;
@@ -302,6 +306,7 @@ Gym* update_gym(Gym *gym)  {
     gym->deadlock_victim = sharedGym->deadlock_victim;
     gym->maxCouches = sharedGym->maxCouches;
     gym->unit_time = sharedGym->unit_time;
+    gym->boundary_case = sharedGym->boundary_case;
     gym->num_trainers = sharedGym->num_trainers;
     gym->realistic = sharedGym->realistic;
     gym->fix_deadlock = sharedGym->fix_deadlock;
