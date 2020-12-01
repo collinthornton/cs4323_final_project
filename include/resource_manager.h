@@ -192,6 +192,11 @@ static int weight_matrix_add_req(pid_t pid, Weight *weight, WeightMatrix *matrix
  */
 static int weight_matrix_sub_req(pid_t pid, Weight *weight, WeightMatrix *matrix);
 
+static Weight* __getGymResources();
+static Weight* __getAvailableWeights();
+static WeightMatrix* __getWeightAllocation();
+static WeightMatrix* __getWeightRequest();
+
 
 /**
  * @brief read a weight matrix from the input file

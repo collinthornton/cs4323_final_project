@@ -239,15 +239,27 @@ const char* weight_matrix_to_string(WeightMatrix *matrix, char buffer[]) {
 
 Weight* getGymResources() {
     sem_wait(resource_manager_sem);
-    Weight *database = getWeightFromFile(0);
+    Weight *database = __getGymResources();
     sem_post(resource_manager_sem);
     return database;
 }
 
 Weight* getAvailableWeights() {
     sem_wait(resource_manager_sem);
-    Weight *total = getGymResources();
-    WeightMatrix *allocated = getWeightAllocation();
+    Weight *total = __getAvailableWeights();
+    sem_post(resource_manager_sem);
+    return total;
+}
+
+
+static Weight* __getGymResources() {
+    Weight *database = getWeightFromFile(0);
+    return database;    
+}
+
+static Weight* __getAvailableWeights() {
+    Weight *total = __getGymResources();
+    WeightMatrix *allocated = __getWeightAllocation();
     
     Weight *total_used = weight_init(NULL);
     for(int i=0; i<allocated->num_rows; ++i) {
@@ -258,8 +270,7 @@ Weight* getAvailableWeights() {
 
     weight_matrix_del(allocated);
     weight_del(total_used);
-    sem_post(resource_manager_sem);
-    return total;
+    return total;    
 }
 
 
@@ -339,7 +350,7 @@ Weight* getWeightFromFile(unsigned int section) {
 
 WeightMatrix* getWeightAllocation() {
     sem_wait(resource_manager_sem);
-    WeightMatrix* ret = getWeightMatrixFromFile(1);
+    WeightMatrix* ret = __getWeightAllocation();
     sem_post(resource_manager_sem);
 
    return ret;
@@ -347,12 +358,19 @@ WeightMatrix* getWeightAllocation() {
 
 WeightMatrix* getWeightRequest() {
     sem_wait(resource_manager_sem);
-    WeightMatrix* ret = getWeightMatrixFromFile(2);
+    WeightMatrix* ret = __getWeightRequest();
     sem_post(resource_manager_sem);
 
     return ret;    
 }
 
+static WeightMatrix* __getWeightAllocation() {
+   return getWeightMatrixFromFile(1);  
+}
+
+static WeightMatrix* __getWeightRequest() {
+    return getWeightMatrixFromFile(2);;    
+}
 
 static WeightMatrix* getWeightMatrixFromFile(unsigned int section) {
     if(section > 2 || section == 0) {
@@ -446,9 +464,9 @@ static WeightMatrix* getWeightMatrixFromFile(unsigned int section) {
 
 int grantWeightRequest(pid_t pid) {
     sem_wait(resource_manager_sem);
-    WeightMatrix *tot_request = getWeightRequest();
-    WeightMatrix *tot_allocation = getWeightAllocation();
-    Weight *currently_availble = getAvailableWeights();
+    WeightMatrix *tot_request = __getWeightRequest();
+    WeightMatrix *tot_allocation = __getWeightAllocation();
+    Weight *currently_availble = __getAvailableWeights();
 
     Weight *tmp = weight_init(NULL);
     weight_matrix_add_req(pid, tmp, tot_allocation);
@@ -494,8 +512,8 @@ int grantWeightRequest(pid_t pid) {
 
 int writeWeightAllocation(pid_t pid, Weight *weight) {
     sem_wait(resource_manager_sem);
-    WeightMatrix *alloc_matrix = getWeightAllocation();
-    WeightMatrix *req_matrix = getWeightRequest();
+    WeightMatrix *alloc_matrix = __getWeightAllocation();
+    WeightMatrix *req_matrix = __getWeightRequest();
     Weight *tmp_weight = weight_init(NULL);
 
     weight_matrix_add_req(pid, weight, alloc_matrix);
@@ -510,8 +528,8 @@ int writeWeightAllocation(pid_t pid, Weight *weight) {
 }
 int writeWeightRequest(pid_t pid, Weight *weight) {
     sem_wait(resource_manager_sem);
-    WeightMatrix *req_matrix = getWeightRequest();
-    WeightMatrix *alloc_matrix = getWeightAllocation();
+    WeightMatrix *req_matrix = __getWeightRequest();
+    WeightMatrix *alloc_matrix = __getWeightAllocation();
     Weight *tmp_weight = weight_init(NULL);
 
     weight_matrix_add_req(pid, weight, req_matrix);
@@ -598,7 +616,7 @@ static int writeWeightMatrixToFile(WeightMatrix *matrix, int section) {
 
 int releaseWeightAllocation(pid_t pid, Weight *weight) {
     sem_wait(resource_manager_sem);
-    WeightMatrix *matrix = getWeightAllocation();
+    WeightMatrix *matrix = __getWeightAllocation();
 
     WeightMatrixRow *row = weight_matrix_search(pid, matrix, NULL);
     if (row == NULL) {
@@ -622,7 +640,7 @@ int releaseWeightAllocation(pid_t pid, Weight *weight) {
 }
 int removeWeightRequest(pid_t pid, Weight *weight) {
     sem_wait(resource_manager_sem);
-    WeightMatrix *matrix = getWeightRequest();
+    WeightMatrix *matrix = __getWeightRequest();
     weight_matrix_sub_req(pid, weight, matrix);
     int ret = writeWeightMatrixToFile(matrix, 2);
     weight_matrix_del(matrix);

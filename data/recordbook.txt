@@ -1,0 +1,4 @@
+Client Name: client 5250	ID: 5250	Total Weight: 1130
+Client Name: client 5251	ID: 5251	Total Weight: 1175
+Client Name: client 5249	ID: 5249	Total Weight: 810
+Client Name: client 5252	ID: 5252	Total Weight: 1710
