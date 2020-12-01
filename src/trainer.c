@@ -16,6 +16,7 @@
 #include "trainer.h"
 #include "workout_room.h"
 #include "resource_manager.h"
+#include "recordbook.h"
 #include "gym.h"
 
 
@@ -51,6 +52,7 @@ int trainer_proc_state_machine() {
 
     open_trainer_sem();
     open_resource_manager();
+    openRecordBook();
 
     int pid = getpid();
 
@@ -171,6 +173,7 @@ int trainer_proc_state_machine() {
     close_shared_gym();
     close_resource_manager();
     close_trainer_sem();
+    closeRecordBook();
 
     printf("Trainer %d exiting\r\n", getpid());
 

@@ -44,12 +44,16 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
     init_resource_manager();
     init_trainer_sem();
     init_client_sem();
-    initRecordBook(NULL);
+    initRecordBook();
+
+    openRecordBook();
+    clearRecordBook();
 
     sem_close(shared_gym_sem);
     close_resource_manager();
     close_trainer_sem();
     close_client_sem();
+    closeRecordBook();
 
     //TODO Get rid of this if unneeded
     //open_gym(3,3,5,0);
@@ -85,18 +89,18 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
     open_resource_manager();
     open_trainer_sem(); 
     open_client_sem();
+    openRecordBook();
     
     Gym *gym = gym_init();
     update_gym(gym);   
 
-
-    //if(!boundary_case) {
     delay(2*gym->unit_time);
 
     close_shared_gym();
     close_resource_manager();
     close_trainer_sem();
     close_client_sem();
+    closeRecordBook();
     gym_del(gym);
 
     client_start();
@@ -106,9 +110,9 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
     open_resource_manager();
     open_trainer_sem();
     open_client_sem();
+    openRecordBook();
     gym = gym_init();
     update_gym(gym);
-   // }
 
 
     //////////////////////////
@@ -119,7 +123,6 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
 
     printf("gym unit time %d\r\n", gym->unit_time);
 
-    //if(!gym->boundary_case)
     delay(15*gym->unit_time);
     
     update_gym(gym);
@@ -129,27 +132,6 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
     bool first_time = true;
 
     while(gym->trainerList->len > 0) {
-
-        if(!gym->boundary_case && first_time) {
-            // CAUSE PROBLEMS
-
-            close_shared_gym();
-            close_resource_manager();
-            close_trainer_sem();
-            close_client_sem();
-            gym_del(gym);
-
-            // PUT 2 CLIENTS IN THE WAITING ROOM
-            //for(int i=0; i<num_trainers+2; ++i) client_start();
-            //first_time = false;
-
-            open_shared_gym();
-            open_resource_manager();
-            open_trainer_sem();
-            open_client_sem();
-            gym = gym_init();
-            update_gym(gym);
-        }
 
 
         if(print_delay % 5 == 0) {
@@ -233,4 +215,7 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
 
     close_client_sem();
     destroy_client_sem();
+
+    closeRecordBook();
+    destroyRecordBook();
 }

@@ -1,0 +1,7 @@
+Client Name: client 6387	ID: 6387	Total Weight: 315
+Client Name: client 6386	ID: 6386	Total Weight: 465
+Client Name: client 6385	ID: 6385	Total Weight: 515
+Client Name: client 6388	ID: 6388	Total Weight: 175
+Client Name: client 6392	ID: 6392	Total Weight: 550
+Client Name: client 6389	ID: 6389	Total Weight: 2340
+Client Name: client 6391	ID: 6391	Total Weight: 2220

@@ -90,8 +90,8 @@ int client_workout_event(Gym *gym, Client *client) {
             --i;
             continue;
         }
-        client->workout.total_weight = -1;
-        update_shared_gym(gym);       
+        //client->workout.total_weight = -1;
+        //update_shared_gym(gym);       
        
         client_lift_weights(gym, client);
         update_shared_gym(gym);
@@ -146,6 +146,13 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
     trainer_set_workout(gym, trainer);
     update_shared_gym(gym);
 
+    if(!gym->realistic)
+        printf("trainer %d picked workout for client %d: num_sets %d\r\n", getpid(), trainer->client_pid, trainer->workout.total_sets);
+
+    else
+        printf("trainer %d picked workout for client %d: total_weight %d, num_sets %d\r\n", getpid(), trainer->client_pid, trainer->workout.total_weight, trainer->workout.total_sets);
+
+
     // WAIT FOR CLIENT TO ACKNOWLEDGE WORKOUT
     while(client->workout.total_weight <= 0) {
         delay(2*gym->unit_time);
@@ -156,40 +163,40 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
 
     int total_weight = client->workout.total_weight;
 
-    if(!gym->realistic)
-        printf("trainer %d picked workout for client %d: num_sets %d\r\n", getpid(), trainer->client_pid, trainer->workout.total_sets);
-
-    else
-        printf("trainer %d picked workout for client %d: total_weight %d, num_sets %d\r\n", getpid(), trainer->client_pid, trainer->workout.total_weight, trainer->workout.total_sets);
-
-
     // NOW WAIT FOR CLIENT TO LEAVE THE WORKOUT
-    while(client != NULL) {        
-        #ifdef VERBOSE
-        printf("Trainer %d waiting for client to finish set\r\n", getpid());
-        #endif // VERBOSE
 
-        trainer_set_workout(gym, trainer);
-        update_shared_gym(gym);
-        update_gym(gym);
-        trainer = trainer_list_find_pid(getpid(), gym->trainerList);
-        client = client_list_find_pid(trainer->client_pid, gym->workoutList);
+    while(client != NULL) {        
 
         // WAIT FOR CLIENT TO GRAB WEIGHTS
         while(client != NULL && client->workout.total_weight > 0) {
-            delay(2*gym->unit_time);
+            delay(0.5*gym->unit_time);
             update_gym(gym);
             trainer = trainer_list_find_pid(getpid(), gym->trainerList);
             client = client_list_find_pid(trainer->client_pid, gym->workoutList);
         }
 
-        if(client != NULL)
-            total_weight += client->workout.total_weight;
+        trainer_set_workout(gym, trainer);
+        update_shared_gym(gym);
+        update_gym(gym);
 
-        delay(2*gym->unit_time);
+        trainer = trainer_list_find_pid(getpid(), gym->trainerList);
+        client = client_list_find_pid(trainer->client_pid, gym->workoutList);
 
         if(gym->realistic && client != NULL)
             printf("trainer %d picked %d weight for client %d\r\n", getpid(), trainer->workout.total_weight, trainer->client_pid);
+            
+        // WAIT FOR CLIENT TO ACKNOWLEDGE WORKOUT
+        while(client != NULL && client->workout.total_weight <= 0) {
+            delay(0.5*gym->unit_time);
+            update_gym(gym);
+            trainer = trainer_list_find_pid(getpid(), gym->trainerList);
+            client = client_list_find_pid(trainer->client_pid, gym->workoutList);
+        }  
+
+        if(client != NULL) total_weight += client->workout.total_weight;
+
+        delay(2*gym->unit_time);
+
     }
 
     trainer->workout.sets_left = -1;
@@ -201,6 +208,8 @@ int trainer_workout_event(Gym *gym, Trainer *trainer) {
         Emp record_entry;
         record_entry.id = trainer->client_pid;
         record_entry.weight = total_weight;
+
+        for(int i=0; i<MAX_NAME_LEN; ++i) record_entry.name[i] = '\0';
 
         sprintf(record_entry.name, "client %d", trainer->client_pid);
 
@@ -230,7 +239,7 @@ int trainer_set_workout(Gym *gym, Trainer *trainer) {
     static int weight_increase = 0;
     weight_increase += 5;
 
-    int total_weight = ((init_weight) % (MAX_WEIGHT - MIN_WEIGHT + 1)/2) + weight_increase;
+    int total_weight = ((init_weight) % (MAX_WEIGHT - MIN_WEIGHT + 1)/2) + MIN_WEIGHT + weight_increase;
     total_weight = (total_weight > MAX_WEIGHT*2) ? 2*MAX_WEIGHT : total_weight;
     total_weight = 5 * (total_weight/5);
 
@@ -249,11 +258,13 @@ int trainer_set_workout(Gym *gym, Trainer *trainer) {
 
 int client_get_workout(Gym *gym, Client *client, Trainer *trainer, bool first_time) {
     // WAIT FOR THE TRAINER TO SEND US A WORKOUT
-    update_gym(gym);
-    trainer = trainer_list_find_client(getpid(), gym->trainerList);
 
     client->workout.total_weight = -1;
 
+    update_shared_gym(gym);
+    update_gym(gym);
+
+    trainer = trainer_list_find_client(getpid(), gym->trainerList);
     while(trainer->workout.total_weight <= 0) {
         #ifdef VERBOSE
         printf("client %d waiting for workout\r\n", getpid());
@@ -273,8 +284,12 @@ int client_get_workout(Gym *gym, Client *client, Trainer *trainer, bool first_ti
 
     client->workout.total_weight = trainer->workout.total_weight;
 
-    if(gym->realistic)
-        printf("client %d updated workout to weight %d from trainer %d\r\n", getpid(), client->workout.total_weight, trainer->pid);
+    update_shared_gym(gym);
+    trainer = trainer_list_find_client(getpid(), gym->trainerList);
+
+
+    //if(gym->realistic)
+    //    printf("client %d updated workout to weight %d from trainer %d\r\n", getpid(), client->workout.total_weight, trainer->pid);
 
     return 0;
 }
@@ -367,6 +382,9 @@ int client_get_weights(Gym *gym, Client *client) {
         } 
     }
 
+    client->workout.total_weight = 0;
+    update_shared_gym(gym);
+
     Weight *request = weight_init(weights);
     vector_subtract(request->num_plates, client->workout.in_use.num_plates, NUMBER_WEIGHTS);
 
@@ -432,7 +450,7 @@ int client_get_weights(Gym *gym, Client *client) {
 
 
 
-    printf("client %d got weight allocation\r\n", getpid());
+    //printf("client %d got weight allocation\r\n", getpid());
 
     vector_add(client->workout.in_use.num_plates, req.num_plates, NUMBER_WEIGHTS);
     //client->workout.in_use = req;

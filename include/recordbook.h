@@ -2,10 +2,17 @@
 #ifndef RECORDKEEPING_RECORDBOOK_H
 #define RECORDKEEPING_RECORDBOOK_H
 
+#include <pthread.h>
+
+#define MAX_NAME_LEN 100
+
+typedef struct SharedMutex {
+    pthread_mutex_t mutex;
+} SharedMutex;
 
 typedef struct emp
 {
-    char name[100];
+    char name[MAX_NAME_LEN];
     int id;
     int weight;
 } Emp;
@@ -13,6 +20,9 @@ typedef struct emp
 void addToRecordBook(struct emp *empValue);
 void displayRecordBook();
 void clearRecordBook();
-void initRecordBook(char *filename);
+void initRecordBook();
+void openRecordBook();
+void closeRecordBook();
+void destroyRecordBook();
 
 #endif //RECORDKEEPING_RECORDBOOK_H
