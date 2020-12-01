@@ -238,7 +238,9 @@ const char* weight_matrix_to_string(WeightMatrix *matrix, char buffer[]) {
 }
 
 Weight* getGymResources() {
+    sem_wait(resource_manager_sem);
     Weight *database = getWeightFromFile(0);
+    sem_post(resource_manager_sem);
     return database;
 }
 
@@ -629,12 +631,15 @@ int removeWeightRequest(pid_t pid, Weight *weight) {
 }
 
 int clearWeightFile() {
+    sem_wait(resource_manager_sem);
     WeightMatrix *matrix = weight_matrix_init();
     int ret1 = writeWeightMatrixToFile(matrix, 1);
     int ret2 = writeWeightMatrixToFile(matrix, 2);
     weight_matrix_del(matrix);
 
     remove(TMP_FILENAME);
+
+    sem_post(resource_manager_sem);
 
     if(ret2 < 0) return ret2;
     return ret1;
