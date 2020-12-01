@@ -17,16 +17,15 @@
 
 #include "client.h"
 #include "gym.h"
-#include "entrance.h"
 #include "workout_room.h"
 #include "resource_manager.h"
 
 
-
+// Initialize semaphore names
 static const char CLIENT_ARRIVING_SEM_NAME[] = "/sem_client_arriving";
 static const char CLIENT_WAITING_SEM_NAME[] = "/sem_client_waiting";
 
-
+// Declare semaphores
 static sem_t *client_arriving_sem;
 static sem_t *client_waiting_sem;
 
@@ -36,6 +35,11 @@ static sem_t *client_waiting_sem;
 // Client process functions
 //
 
+
+/**
+ * @brief Spawn a client child process. New process will launch client_proc_state_machine()
+ * @return (pid_t) Process ID of new child process
+ */
 pid_t client_start() {
     pid_t pid = fork();
     
@@ -52,7 +56,14 @@ pid_t client_start() {
     }
 }
 
+
+/**
+ * @brief Execute the client state machine. Should be run by client process
+ * @return (int) return code. negative on error
+ */
 int client_proc_state_machine() {
+
+    // Intialize semaphores and shared memory
 
     open_client_sem();
     open_resource_manager();
@@ -69,6 +80,7 @@ int client_proc_state_machine() {
     }
 
 
+    // Intialize a new client struct
     Client *client = client_init(getpid(), ARRIVING, NULL, NULL, NULL);
     Trainer *trainer;
 
@@ -83,7 +95,6 @@ int client_proc_state_machine() {
 
         switch(client->state) {
             case ARRIVING:
-                // ADD SEMAPHORE
 
                 if(gym->boundary_case) {
                     sem_wait(client_arriving_sem);
@@ -145,7 +156,7 @@ int client_proc_state_machine() {
                 break;
 
             case WAITING:
-                // ADD SEMAPHORE
+
                 if(gym->boundary_case)
                     sem_wait(client_waiting_sem);
 
@@ -185,18 +196,16 @@ int client_proc_state_machine() {
 
                 delay(1*gym->unit_time);
 
-                // RELEASE 
                 if(gym->boundary_case)
                     sem_post(client_waiting_sem);
                 break;
 
             case MOVING:
-                    //This is the "traveling" piece,
 
-                    printf("CLIENT %d MOVING\r\n", pid);
+                printf("CLIENT %d MOVING\r\n", pid);
 
-                    delay(6*gym->unit_time);
-                    client->state = WAITING;
+                delay(6*gym->unit_time);
+                client->state = WAITING;
                 break;
 
             case TRAINING:
@@ -262,6 +271,15 @@ int client_proc_state_machine() {
 //
 
 
+/**
+ * @brief Initialize a client struct on the heap
+ * @param pid (pid_t) Process ID of client
+ * @param state (ClientState) Initial state of client
+ * @param trainer (Trainer*) Current trainer (NULL if none)
+ * @param couch (Couch*) Current couch of client (NULL if none)
+ * @param worktout (Workout*) Current workout of client (NULL if none)
+ * @return (Client*) Struct initialized on heap
+ */
 Client* client_init(pid_t pid, ClientState state, Trainer* trainer, Couch* couch, Workout* workout) {
     Client* client = (Client*)malloc(sizeof(Client));
 
@@ -299,6 +317,12 @@ Client* client_init(pid_t pid, ClientState state, Trainer* trainer, Couch* couch
     return client;
 }
 
+
+/**
+ * @brief Free a client struct from the heap
+ * @param client (Client*) struct to be deleted
+ * @return (int) return code. negative on error
+ */
 int client_del(Client* client) {   
     if(client == NULL) return -1;
 
@@ -306,6 +330,13 @@ int client_del(Client* client) {
     return 0;
 }
 
+
+/**
+ * @brief stringify a client struct
+ * @param client (Client*) struct to be stringified
+ * @param buffer (char[]) string buffer
+ * @return (const char*) same as buffer
+ */
 const char* client_to_string(Client *client, char buffer[]) {
     if(client == NULL) return NULL;
 
@@ -332,6 +363,11 @@ const char* client_to_string(Client *client, char buffer[]) {
 // Client list functions
 //
 
+
+/**
+ * @brief Initalize a client LL on the heap
+ * @return (ClientList*) newly allocated LL
+ */
 ClientList* client_list_init() {
     ClientList* list = (ClientList*)malloc(sizeof(ClientList));
 
@@ -346,6 +382,12 @@ ClientList* client_list_init() {
     return list;
 }
 
+
+/**
+ * @brief Delete a client LL from the heap
+ * @param list (ClientList*) list to be deleted
+ * @return (int) return code. negative on error
+ */
 int client_list_del_clients(pid_t exclude, ClientList *list) {
     if(list == NULL) return 0;
 
@@ -358,6 +400,13 @@ int client_list_del_clients(pid_t exclude, ClientList *list) {
     return 0;
 }
 
+
+/**
+ * @brief Delete clients from LL. Will free the client structs
+ * @param exclude (pid_t) Client PID to exclude from deletion
+ * @param list (ClientList*) LL from which to delete clients
+ * @return (int) return code. negative on error
+ */
 int client_list_del(ClientList *list) {
     if(list == NULL) return 0;
 
@@ -374,6 +423,13 @@ int client_list_del(ClientList *list) {
     return 0;
 }
 
+
+/**
+ * @brief Add a client to the LL
+ * @param client (Client*) client to be added
+ * @param list (ClientList*) list to which client is added
+ * @return (int) return code. negative on error
+ */
 int client_list_add_client(Client *client, ClientList *list) {
     ClientNode *new_node = (ClientNode*)malloc(sizeof(ClientNode));
 
@@ -405,6 +461,13 @@ int client_list_add_client(Client *client, ClientList *list) {
     return list->len;
 }
 
+
+/**
+ * @brief Remove a client from an LL
+ * @param client (Client*) client to be removed
+ * @param list (ClientList*) list from which to remove client
+ * @return (int) return code. negative on error
+ */
 int client_list_rem_client(Client *client, ClientList *list) {
     if(list == NULL || client == NULL) {
         perror("client_list_rem_client() invalid_argument");
@@ -444,6 +507,13 @@ int client_list_rem_client(Client *client, ClientList *list) {
     return list->len;
 }
 
+
+/**
+ * @brief stringify a client LL
+ * @param list (ClientList*) LL to be stringified
+ * @param bufer (char[]) buffer to store new string
+ * @return (const char*) same as buffer
+ */
 const char* client_list_to_string(ClientList* list, char buffer[]) {
     if(list == NULL) return NULL;
 
@@ -469,6 +539,12 @@ const char* client_list_to_string(ClientList* list, char buffer[]) {
 }
 
 
+/**
+ * @brief search a client LL for a given client
+ * @param client (Client*) needle
+ * @param list (ClientList*) haystack
+ * @return (ClientNode*) the node containing the requested client. NULL if not found
+ */
 ClientNode* client_list_srch(Client *client, ClientList *list) {
     if (client == NULL || list == NULL) return NULL;
 
@@ -480,6 +556,13 @@ ClientNode* client_list_srch(Client *client, ClientList *list) {
     return NULL;
 }
 
+
+/**
+ * @brief search a client LL for a given client
+ * @param pid (pid_t) needle
+ * @param list (ClientList*) haystack
+ * @return (Client*) pointer to client struct. NULL if not found
+ */
 Client* client_list_find_pid(pid_t pid, ClientList *list) {
     if(list == NULL) return NULL;
 
@@ -491,6 +574,13 @@ Client* client_list_find_pid(pid_t pid, ClientList *list) {
     return NULL;
 }
 
+
+/**
+ * @brief search a client LL for a paired trainer (client->current_trainer.pid)
+ * @param pid (pid_t) needle -> pid of trainer
+ * @param list (ClientList*) haystack
+ * @return (Client*) poitner to client struct with specified trainer. NULL if not found
+ */ 
 Client* client_list_find_trainer(pid_t pid, ClientList *list) {
     if(list == NULL) return NULL;
 
@@ -505,7 +595,16 @@ Client* client_list_find_trainer(pid_t pid, ClientList *list) {
 
 
 
+//////////////////////////////
+//
+// Semaphore handling
+//
 
+
+/**
+ * @brief Inititialize the client semaphore. Should be called on the parent process
+ * @return (int) return code. Negative on failure
+ */
 int init_client_sem() {
     sem_unlink(CLIENT_ARRIVING_SEM_NAME);
     client_arriving_sem = sem_open(CLIENT_ARRIVING_SEM_NAME, O_CREAT, 0644, 1);
@@ -522,6 +621,11 @@ int init_client_sem() {
     }
 }
 
+
+/**
+ * @brief Open the client semaphore. Should be called on the client processes
+ * @return (int) negative on failure
+ */
 int open_client_sem() {
     client_arriving_sem = sem_open(CLIENT_ARRIVING_SEM_NAME, O_CREAT, 0644, 1);
     if(client_arriving_sem == SEM_FAILED) {
@@ -537,12 +641,20 @@ int open_client_sem() {
     return 0;
 }
 
+
+/**
+ * @brief close the client semaphore. Should be called after open_client_sem()
+ */
 void close_client_sem() {
     sem_close(client_arriving_sem);
     sem_close(client_waiting_sem);
     return;
 }
 
+
+/**
+ * @brief free the client semaphore. Should be called after init_client_sem() on parent 
+ */
 void destroy_client_sem() {
     sem_unlink(CLIENT_ARRIVING_SEM_NAME);
     sem_unlink(CLIENT_WAITING_SEM_NAME);

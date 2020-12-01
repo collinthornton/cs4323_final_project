@@ -17,7 +17,10 @@
 #define SHARED_KEY 0x2345
 
 /*Semaphore for the ensuring mutual exclusion*/
-pthread_mutex_t lock;
+typedef struct SharedMutex {
+    pthread_mutex_t mutex;
+} SharedMutex;
+
 
 /* Default file name */
 #define DEFAULT_RECORD_FILE "./data/recordbook.txt"
@@ -36,7 +39,7 @@ void addToRecordBook(struct emp *empValue)
 {
     FILE *fp = NULL;
 
-    pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&shared_mutex->mutex);
     printf("%d ENTERED LOCKED AREA\r\n", getpid());
 
     /*
@@ -59,7 +62,7 @@ void addToRecordBook(struct emp *empValue)
     fclose(fp);
 
     printf("%d LEFT LOCKED AREA\r\n", getpid());
-    pthread_mutex_unlock(&lock);
+    pthread_mutex_unlock(&shared_mutex->mutex);
 }
 
 /* Display the records stored in the file.
@@ -68,7 +71,7 @@ void displayRecordBook()
 {
     FILE *fp = NULL;
     struct emp empVal;
-    pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&shared_mutex->mutex);
     /*
      * Open the file in the append mode.
      * */
@@ -84,7 +87,7 @@ void displayRecordBook()
         memset(&empVal, 0x00, sizeof(empVal));
     }
     fclose(fp);
-    pthread_mutex_unlock(&lock);
+    pthread_mutex_unlock(&shared_mutex->mutex);
 }
 
 /* Opens the file and truncates it, implying all the records are cleared.
@@ -92,14 +95,14 @@ void displayRecordBook()
 void clearRecordBook()
 {
     FILE *fp = NULL;
-    pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&shared_mutex->mutex);
     fp = fopen(RecordFileName, "w");
     if (fp == NULL)
     {
         perror("Failed to open the file. \n");
     }
     fclose(fp);
-    pthread_mutex_unlock(&lock);
+    pthread_mutex_unlock(&shared_mutex->mutex);
 }
 
 

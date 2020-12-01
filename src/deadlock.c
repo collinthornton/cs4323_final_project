@@ -15,6 +15,12 @@
 #include "vector.h"
 
 
+
+/**
+ * @brief Check the input file for deadlocked processes.
+ * @param deadlocked_array (pid_t[]) array with length of number of processes (matrix rows)
+ * @return (int) number of deadlocked processes
+ */
 int checkForDeadlock(pid_t deadlock_array[]) {
     // BASED ON ALGORITHM DESCRIBED ON PG 339 OF TEXTBOOK
 

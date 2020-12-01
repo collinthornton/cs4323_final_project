@@ -6,9 +6,6 @@
 
 #define MAX_NAME_LEN 100
 
-typedef struct SharedMutex {
-    pthread_mutex_t mutex;
-} SharedMutex;
 
 typedef struct emp
 {

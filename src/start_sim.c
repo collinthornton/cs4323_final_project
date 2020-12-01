@@ -1,7 +1,7 @@
 // ##########################################
 // 
 //   Author  -   Collin Thornton
-//   Email   -   robert.cook@okstate.edu
+//   Email   -   collin.thornton@okstate.edu
 //   Brief   -   Final Project part2 source
 //   Date    -   11-20-20
 //
@@ -17,8 +17,17 @@
 
 #include "start_sim.h"
 
-#define NUM_CLIENTS 2 //MAX_CLIENTS
 
+/**
+ * @brief Startup the sim with flags. Used in driver files
+ * @param num_trainer (int) total number of trainers in simulation
+ * @param num_couches (int) max clients in waiting room
+ * @param boundary_case (const bool) solve for part b
+ * @param realistc (const bool) toggle realistic weight algorithm in client
+ * @param detect_deadlock (const bool) solve for part c
+ * @param fix_deadlock (const bool) solve for part d
+ * @param trainer_log (const bool) solve for part e
+ */
 void start_sim(const int num_trainers, const int num_couches, const bool boundary_case, const bool realistic, const bool detect_deadlock, const bool fix_deadlock, const bool trainer_log) {
 
     if(num_trainers < 3 || num_trainers > MAX_TRAINERS) {
@@ -91,6 +100,12 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
 
     delay(2*gym->unit_time);
 
+
+    //////////////////////////
+    //
+    // Setup FCFS failure 
+    //
+
     close_shared_gym();
     close_resource_manager();
     close_trainer_sem();
@@ -113,7 +128,7 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
     //////////////////////////
     //
     // Run parent tasks
-    // - Deadlock detection, etc.
+    // - Deadlock detection, check couches taken, etc.
     // 
 
     printf("gym unit time %d\r\n", gym->unit_time);
@@ -177,16 +192,13 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
 
 
 
-    // test_workout_room();
-
-
     //////////////////////////
     //
     // Wait for child processes to exit
     //
 
     printf("parent -> waiting for processes to exit\r\n");
-    for(int i=0; i<NUM_CLIENTS; ++i)  waitpid(client_pids[i], NULL, 0);
+    for(int i=0; i<num_clients; ++i)  waitpid(client_pids[i], NULL, 0);
     for(int i=0; i<num_trainers; ++i) waitpid(trainer_pids[i], NULL, 0);
 
 
