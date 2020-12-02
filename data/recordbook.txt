@@ -1,0 +1,5 @@
+Client Name: client 3505286	ID: 3505286	Total Weight: 260
+Client Name: client 3505282	ID: 3505282	Total Weight: 590
+Client Name: client 3505283	ID: 3505283	Total Weight: 710
+Client Name: client 3505288	ID: 3505288	Total Weight: 295
+Client Name: client 3505287	ID: 3505287	Total Weight: 1610
