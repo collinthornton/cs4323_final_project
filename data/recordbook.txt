@@ -1,4 +1,0 @@
-Client Name: client 3466593	ID: 3466593	Total Weight: 295
-Client Name: client 3466592	ID: 3466592	Total Weight: 260
-Client Name: client 3466591	ID: 3466591	Total Weight: 2745
-Client Name: client 3466590	ID: 3466590	Total Weight: 3330

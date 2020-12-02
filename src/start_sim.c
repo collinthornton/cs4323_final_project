@@ -103,7 +103,7 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
 
     //////////////////////////
     //
-    // Setup FCFS failure 
+    // Setup couch failure 
     //
 
     close_shared_gym();
@@ -135,6 +135,29 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
 
     delay(15*gym->unit_time);
     
+    
+    //////////////////////////
+    //
+    // Setup FCFS failure 
+    //
+
+    close_shared_gym();
+    close_resource_manager();
+    close_trainer_sem();
+    close_client_sem();
+    closeRecordBook();
+    gym_del(gym);
+
+    client_start();
+
+    open_shared_gym();
+    open_resource_manager();
+    open_trainer_sem();
+    open_client_sem();
+    openRecordBook();
+    gym = gym_init();
+    update_gym(gym);
+
     update_gym(gym);
 
     int print_delay = 0;
