@@ -221,7 +221,7 @@ void start_sim(const int num_trainers, const int num_couches, const bool boundar
     //
 
     printf("parent -> waiting for processes to exit\r\n");
-    for(int i=0; i<num_clients; ++i)  waitpid(client_pids[i], NULL, 0);
+    for(int i=0; i<num_clients+3; ++i)  waitpid(client_pids[i], NULL, 0);
     for(int i=0; i<num_trainers; ++i) waitpid(trainer_pids[i], NULL, 0);
 
 

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/shm.h>
@@ -15,6 +16,9 @@
 
 
 #define SHARED_KEY 0x2345
+
+#define TEST_RECORDBOOK
+
 
 /*Semaphore for the ensuring mutual exclusion*/
 typedef struct SharedMutex {
@@ -32,6 +36,8 @@ char *RecordFileName = NULL;
 SharedMutex *shared_mutex;
 
 
+static bool TEST = false;
+
 //This function takes the struct 'emp' and adds the name, id, and weight to the record book text file
 void addToRecordBook(struct emp *empValue)
 {
@@ -39,7 +45,11 @@ void addToRecordBook(struct emp *empValue)
 
     //starts in locked mode
     pthread_mutex_lock(&shared_mutex->mutex);
-    printf("%d ENTERED LOCKED AREA\r\n", getpid());
+
+    if(TEST) {
+        printf("%d ENTERED LOCKED AREA WAITING 2 SECONDS\r\n", getpid());
+        sleep(2);
+    }
 
     //opens the file in append mode
     fp = fopen(RecordFileName, "a");
@@ -60,7 +70,11 @@ void addToRecordBook(struct emp *empValue)
     fclose(fp);
 
     //unlocks the mutex lock
-    printf("%d LEFT LOCKED AREA\r\n", getpid());
+
+    if(TEST) {
+        printf("%d LEFT LOCKED AREA\r\n", getpid());
+    }
+
     pthread_mutex_unlock(&shared_mutex->mutex);
 }
 
@@ -203,4 +217,49 @@ void destroyRecordBook() {
         perror("Something went wrong with the shmctl function\n");
         return;
     }
+}
+
+
+
+void test_recordbook() {
+
+    TEST = true;
+
+    initRecordBook();
+    closeRecordBook();
+
+    for(int i=0; i<2; ++i) {
+        pid_t pid = fork();
+
+        if(pid < 0) {
+            perror("fork");
+            exit(1);
+        }
+        else if(pid == 0) {
+            // CHILD PROCESS
+            openRecordBook();
+
+            srand(getpid());
+            Emp entry;
+            
+            sprintf(entry.name, "Process %d", getpid());
+            entry.id = getpid();
+            entry.weight = rand() % 500;
+
+            addToRecordBook(&entry);
+
+            closeRecordBook();
+
+            exit(0);
+        }
+        else {
+            // PARENT PROCESS -> DON'T DO MUCH
+            printf("Spawned process %d\r\n", pid);
+        }
+    }
+
+    for(int i=0; i<2; ++i) wait(NULL);
+
+    TEST = false;
+
 }

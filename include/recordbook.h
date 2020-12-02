@@ -22,4 +22,6 @@ void openRecordBook();
 void closeRecordBook();
 void destroyRecordBook();
 
+void test_recordbook();
+
 #endif //RECORDKEEPING_RECORDBOOK_H

@@ -27,7 +27,14 @@ part2: $(BUILD_DIR)/part2.o $(OBJ)
 part3: $(BUILD_DIR)/part3.o $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
+test_deadlock_rollback: $(BUILD_DIR)/test_deadlock_rollback.o $(OBJ)
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+test_recordbook: $(BUILD_DIR)/test_recordbook.o $(OBJ)
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS) 
+
+
 .PHONY: clean
 
 clean:
-	rm -f $(BUILD_DIR)/*.o part1 part2 part3
+	rm -f $(BUILD_DIR)/*.o part1 part2 part3 test_recordbook test_deadlock_rollback
