@@ -1,4 +1,0 @@
-Client Name: client 17349	ID: 17349	Total Weight: 230
-Client Name: client 17350	ID: 17350	Total Weight: 585
-Client Name: client 17351	ID: 17351	Total Weight: 1380
-Client Name: client 17352	ID: 17352	Total Weight: 3175
